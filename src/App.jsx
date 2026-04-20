@@ -89,10 +89,34 @@ function normalizeStreetName(street) {
 
 async function fetchStreetCleaning(street) {
   const name = normalizeStreetName(street);
-  // Use LIKE so partial matches work (e.g. "BROADWAY" matches "BROADWAY" in dataset)
   const encoded = encodeURIComponent(name);
-  const url = `${SOCRATA}/xswq-wnv9.json?$where=upper(street) LIKE '%25${encoded}%25' AND upper(description) LIKE '%25NO PARKING%25'&$limit=50`;
-  try { const r = await fetch(url); return r.ok ? r.json() : []; } catch { return []; }
+
+  // Hit both datasets in parallel:
+  // 1. Dedicated ASP signs dataset (purpose-built for street cleaning)
+  // 2. DOT parking signs dataset (uses signdesc not description)
+  const [aspRes, dotRes] = await Promise.allSettled([
+    fetch(`${SOCRATA}/2x64-6f34.json?$where=upper(street) LIKE '%25${encoded}%25'&$limit=50`)
+      .then(r => r.ok ? r.json() : []).catch(() => []),
+    fetch(`${SOCRATA}/xswq-wnv9.json?$where=upper(street) LIKE '%25${encoded}%25' AND (upper(signdesc) LIKE '%25STREET CLEANING%25' OR upper(signdesc) LIKE '%25NO PARKING%25')&$limit=50`)
+      .then(r => r.ok ? r.json() : []).catch(() => []),
+  ]);
+
+  const aspData = aspRes.status === "fulfilled" ? aspRes.value : [];
+  const dotData = dotRes.status === "fulfilled" ? dotRes.value : [];
+
+  // Normalize both into a common shape our parser understands
+  return [
+    ...aspData.map(r => ({
+      description: r.signdesc || r.sign_text || r.regulation || r.asp_text || "",
+      side_of_street: r.side || r.sos || "",
+      street: r.street || "",
+    })),
+    ...dotData.map(r => ({
+      description: r.signdesc || r.description || "",
+      side_of_street: r.side_of_street || r.sos || "",
+      street: r.street || "",
+    })),
+  ].filter(r => r.description); // remove blanks
 }
 
 async function fetchFilmPermits(street) {
