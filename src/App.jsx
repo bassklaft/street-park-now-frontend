@@ -2,7 +2,6 @@ import { useState, useCallback } from "react";
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const API = import.meta.env?.VITE_BACKEND_URL || "https://street-park-info-backend.onrender.com";
-const GEO = "https://geosearch.planninglabs.nyc/v2";
 
 // ─── WEATHER ─────────────────────────────────────────────────────────────────
 const WX_LABELS = {
@@ -23,46 +22,19 @@ function wxIcon(code) {
   return "☀";
 }
 
-// ─── GEOCODING ───────────────────────────────────────────────────────────────
-// Accepts anything: address, building name, intersection, street name
+// ─── GEOCODING (proxied through backend — no CORS issues) ────────────────────
 async function geocode(input) {
-  const query = input.trim();
-  // Append NYC context if not already there
-  const withCity = /new york|nyc|brooklyn|manhattan|bronx|queens|staten island/i.test(query)
-    ? query : `${query}, New York City`;
-
-  const url = `${GEO}/search?text=${encodeURIComponent(withCity)}&size=3&layers=address,street,venue,neighbourhood`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("Geocoding failed");
-  const data = await r.json();
-
-  if (!data.features?.length) throw new Error(`Couldn't find "${input}" in NYC. Try a street name or address.`);
-
-  const best = data.features[0].properties;
-  const [lng, lat] = data.features[0].geometry.coordinates;
-
-  return {
-    street: best.street || best.name || query.toUpperCase(),
-    borough: best.borough || best.county || "",
-    neighborhood: best.neighbourhood || best.locality || "",
-    label: best.label || query,
-    lat, lng,
-  };
+  const r = await fetch(`${API}/api/geocode?q=${encodeURIComponent(input.trim())}`);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || `Could not find "${input}" in NYC`);
+  return d;
 }
 
 async function reverseGeocode(lat, lng) {
-  const r = await fetch(`${GEO}/reverse?point.lat=${lat}&point.lon=${lng}&size=1`);
-  if (!r.ok) throw new Error("Reverse geocoding failed");
-  const data = await r.json();
-  const p = data.features?.[0]?.properties;
-  if (!p) throw new Error("Could not identify your street");
-  return {
-    street: p.street || p.name || "",
-    borough: p.borough || "",
-    neighborhood: p.neighbourhood || p.locality || "",
-    label: p.label || "",
-    lat, lng,
-  };
+  const r = await fetch(`${API}/api/reverse-geocode?lat=${lat}&lng=${lng}`);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "Could not identify your street");
+  return d;
 }
 
 // ─── API CALLS (all proxied through our backend — no CORS issues) ─────────────
