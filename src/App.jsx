@@ -347,6 +347,7 @@ export default function App() {
     const streets = 
       loc.isPark && loc.parkStreets?.length ? loc.parkStreets : 
       (loc.isZip || loc.isNeighborhood) && loc.zipStreets?.length ? loc.zipStreets :
+      loc.isGPS && loc.nearbyStreets?.length ? loc.nearbyStreets :
       [loc.street];
     const [cR, fR, evR, wxR, aR] = await Promise.allSettled([
       loadCleaningForStreets(streets, loc.lat, loc.lng),
@@ -369,6 +370,7 @@ export default function App() {
     setErr(null); setPhase("loading");
     try {
       const loc = await geocode(q, coords?.lat, coords?.lng);
+      console.log("Geocode result:", loc.type, "isNeighborhood:", loc.isNeighborhood, "zipStreets:", loc.zipStreets?.length);
       if (loc.type === "ambiguous") {
         setLocData(loc);
         setPhase("ambiguous");
@@ -436,7 +438,7 @@ export default function App() {
   const wxNow        = weather?.current;
   const wxDaily      = weather?.daily;
   const severeNow    = wxNow?.weather_code && SEVERE.has(wxNow.weather_code);
-  const isMulti      = locData?.isPark || locData?.isZip || locData?.isNeighborhood;
+  const isMulti      = locData?.isPark || locData?.isZip || locData?.isNeighborhood || locData?.isGPS;
   const histPins     = showHistory && isSubscribed ? savedSearches.filter(s => s.label !== (locData?.label || locData?.street)) : [];
   const remaining    = Math.max(0, 2 - searchCount);
 
@@ -497,11 +499,12 @@ export default function App() {
               <div className="ambiguous-category">{category}</div>
               {options.map((opt, i) => (
                 <div key={i} className="ambiguous-option" onClick={async () => {
-                  // For neighborhoods, re-geocode to get full street list
                   if (opt.type === "neighborhood" || category === "Neighborhood") {
                     setPhase("loading");
                     try {
-                      const full = await geocode(opt.label, coords?.lat, coords?.lng);
+                      // Strip borough suffix for cleaner neighborhood lookup
+                      const cleanLabel = opt.label.replace(/,\s*(Brooklyn|Manhattan|Queens|Bronx|Staten Island)$/i, "").trim();
+                      const full = await geocode(cleanLabel, coords?.lat, coords?.lng);
                       await loadAll(full);
                     } catch(e) {
                       await loadAll(opt);
@@ -649,7 +652,7 @@ export default function App() {
               {/* Cleaning */}
               <div className="sec">
                 <div className="sec-hd">🧹 Street Cleaning {cleaning.length > 0 && <span className="badge">{cleaning.length}</span>}</div>
-                {isMulti && <div className="sec-note">Showing {locData.isPark ? "all bordering streets" : locData.isNeighborhood ? "all streets in this neighborhood" : "streets in this zip"}</div>}
+                {isMulti && <div className="sec-note">Showing {locData.isPark ? "all bordering streets" : locData.isNeighborhood ? "all streets in this neighborhood" : locData.isGPS ? "nearby streets · closest first" : "streets in this zip"}</div>}
                 {cleaning.length === 0 ? <div className="empty">No street cleaning regulations found for this block.</div>
                   : cleaning.map((c, i) => (
                     <div key={i} className={`clean-card ${c.days?.includes(today) ? "today" : ""}`}>
