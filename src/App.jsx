@@ -330,7 +330,7 @@ export default function StreetParkInfo() {
       <style>{css}</style>
 
       <nav className="nav">
-        <div className="logo">STREET PARK <span>INFO</span></div>
+        <div className="logo" style={{cursor:"pointer"}} onClick={() => { setPhase("home"); setLocData(null); setSignedUp(false); setQuery(""); }}>STREET PARK <span>INFO</span></div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <span className="pill">NYC</span>
           {phase === "dash" && (
