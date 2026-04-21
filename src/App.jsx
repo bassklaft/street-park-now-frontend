@@ -211,6 +211,50 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .map-gps-btn{background:var(--yellow);color:var(--black);border:none;cursor:pointer;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;padding:7px 14px;white-space:nowrap;transition:background .15s;}
 .map-gps-btn:hover{background:var(--yd);}
 
+/* PAYWALL MODAL */
+.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end;justify-content:center;padding:0;}
+.paywall-sheet{background:var(--g2);border-top:3px solid var(--yellow);padding:32px 24px 48px;width:100%;max-width:500px;animation:slideUp .3s ease;}
+.paywall-icon{font-size:2.5rem;margin-bottom:12px;}
+.paywall-title{font-family:var(--display);font-size:2.2rem;letter-spacing:.04em;margin-bottom:8px;}
+.paywall-sub{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.05em;line-height:1.7;margin-bottom:24px;}
+.paywall-free-count{font-family:var(--mono);font-size:.65rem;color:var(--yellow);letter-spacing:.08em;margin-bottom:20px;padding:8px 12px;border:1px solid #2a2a2a;background:var(--g1);}
+.paywall-plans{display:flex;gap:8px;margin-bottom:16px;}
+.paywall-plan{flex:1;background:var(--g1);border:1px solid #2a2a2a;padding:16px 12px;cursor:pointer;transition:border-color .15s;text-align:center;}
+.paywall-plan:hover{border-color:#555;}
+.paywall-plan.best{border-color:var(--yellow);}
+.paywall-plan-name{font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.paywall-plan.best .paywall-plan-name{color:var(--yellow);}
+.paywall-plan-price{font-family:var(--display);font-size:1.8rem;letter-spacing:.04em;}
+.paywall-plan-per{font-family:var(--mono);font-size:.58rem;color:var(--muted);}
+.paywall-plan-tag{font-family:var(--mono);font-size:.55rem;background:var(--yellow);color:var(--black);padding:2px 6px;margin-top:4px;display:inline-block;}
+.paywall-cta{display:block;width:100%;background:var(--yellow);color:var(--black);border:none;cursor:pointer;font-family:var(--display);font-size:1.4rem;letter-spacing:.1em;padding:16px;transition:background .15s;margin-bottom:12px;}
+.paywall-cta:hover{background:var(--yd);}
+.paywall-dismiss{display:block;width:100%;background:none;border:none;color:#555;font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;cursor:pointer;padding:8px;}
+.paywall-dismiss:hover{color:var(--white);}
+.paywall-apple{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#000;color:#fff;border:none;cursor:pointer;font-family:var(--body);font-size:1rem;font-weight:600;padding:14px;margin-bottom:8px;border-radius:8px;transition:opacity .15s;}
+.paywall-apple:hover{opacity:.85;}
+
+/* HISTORY */
+.history-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 0;margin-bottom:4px;}
+.history-toggle input[type=checkbox]{width:16px;height:16px;accent-color:var(--yellow);cursor:pointer;}
+.history-toggle-label{font-family:var(--mono);font-size:.68rem;color:var(--white);letter-spacing:.06em;cursor:pointer;}
+.history-toggle-sub{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.04em;margin-left:26px;margin-bottom:12px;}
+.history-list{margin-bottom:8px;}
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--g1);border:1px solid #1f1f1f;margin-bottom:4px;cursor:pointer;transition:border-color .15s;}
+.history-item:hover{border-color:#333;}
+.history-item-left{display:flex;align-items:center;gap:8px;}
+.history-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.history-dot.area{background:none;border:2px solid var(--green);}
+.history-item-label{font-family:var(--mono);font-size:.65rem;color:var(--white);letter-spacing:.04em;}
+.history-item-meta{font-family:var(--mono);font-size:.56rem;color:var(--muted);letter-spacing:.04em;}
+.history-item-ts{font-family:var(--mono);font-size:.55rem;color:#444;letter-spacing:.04em;}
+.history-clear{font-family:var(--mono);font-size:.6rem;color:#444;letter-spacing:.08em;background:none;border:none;cursor:pointer;padding:4px 0;}
+.history-clear:hover{color:var(--red);}
+.history-locked{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.06em;padding:12px;border:1px dashed #2a2a2a;text-align:center;cursor:pointer;}
+.history-locked:hover{border-color:#555;color:var(--white);}
+
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
 @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:520px){.cards{grid-template-columns:1fr 1fr}.prices{flex-direction:column}.wx-row{flex-direction:column}}
@@ -221,24 +265,19 @@ const todayAbbr = () => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().g
 const fmtDT = s => { try { return new Date(s).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}); } catch { return s; }};
 
 // ─── MAP COMPONENT ───────────────────────────────────────────────────────────
-// Leaflet map — blue pin = user location, red pin = parking destination
-function ParkMap({ destLat, destLng, userLat, userLng, label }) {
+function ParkMap({ destLat, destLng, userLat, userLng, label, history = [] }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Load Leaflet dynamically
     const loadLeaflet = async () => {
       if (!window.L) {
-        // Load Leaflet CSS
         const link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
         document.head.appendChild(link);
-
-        // Load Leaflet JS
         await new Promise((resolve) => {
           const script = document.createElement("script");
           script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -250,7 +289,6 @@ function ParkMap({ destLat, destLng, userLat, userLng, label }) {
       const L = window.L;
       if (!mapRef.current) return;
 
-      // Center between user and destination, or just destination
       const centerLat = userLat ? (destLat + userLat) / 2 : destLat;
       const centerLng = userLng ? (destLng + userLng) / 2 : destLng;
 
@@ -266,26 +304,53 @@ function ParkMap({ destLat, destLng, userLat, userLng, label }) {
         maxZoom: 19,
       }).addTo(map);
 
-      // Red pin — parking destination
+      // ── HISTORY — green pins (establishments) or green circles (areas) ──
+      history.forEach(h => {
+        if (!h.lat || !h.lng) return;
+        if (h.type === "establishment") {
+          // Green pin for establishments
+          const greenIcon = L.divIcon({
+            html: `<div style="width:16px;height:22px;">
+              <svg viewBox="0 0 20 28" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 18 10 18s10-10.5 10-18C20 4.5 15.5 0 10 0z" fill="#38A169" opacity="0.85"/>
+                <circle cx="10" cy="10" r="4" fill="white"/>
+              </svg>
+            </div>`,
+            className: "", iconSize: [16, 22], iconAnchor: [8, 22], popupAnchor: [0, -22],
+          });
+          L.marker([h.lat, h.lng], { icon: greenIcon })
+            .addTo(map)
+            .bindPopup(`<span style="font-family:sans-serif;font-size:12px">🕐 ${h.label}</span>`);
+        } else {
+          // Green circle/highlight for areas (parks, zips, neighborhoods)
+          L.circle([h.lat, h.lng], {
+            radius: h.type === "zip" ? 600 : h.type === "park" ? 400 : 300,
+            color: "#38A169",
+            fillColor: "#38A169",
+            fillOpacity: 0.12,
+            weight: 2,
+            dashArray: "6 4",
+          }).addTo(map)
+          .bindPopup(`<span style="font-family:sans-serif;font-size:12px">🕐 ${h.label}</span>`);
+        }
+      });
+
+      // ── RED PIN — parking destination ──
       const redIcon = L.divIcon({
-        html: `<div style="width:20px;height:28px;position:relative;">
+        html: `<div style="width:20px;height:28px;">
           <svg viewBox="0 0 20 28" xmlns="http://www.w3.org/2000/svg">
             <path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 18 10 18s10-10.5 10-18C20 4.5 15.5 0 10 0z" fill="#E53E3E"/>
             <circle cx="10" cy="10" r="4" fill="white"/>
           </svg>
         </div>`,
-        className: "",
-        iconSize: [20, 28],
-        iconAnchor: [10, 28],
-        popupAnchor: [0, -28],
+        className: "", iconSize: [20, 28], iconAnchor: [10, 28], popupAnchor: [0, -28],
       });
-
       L.marker([destLat, destLng], { icon: redIcon })
         .addTo(map)
-        .bindPopup(`<b style="font-family:sans-serif;font-size:13px">🅿 ${label}</b>`, { maxWidth: 200 })
+        .bindPopup(`<b style="font-family:sans-serif;font-size:13px">🅿 ${label}</b>`)
         .openPopup();
 
-      // Blue pin — user location (if available)
+      // ── BLUE PIN — user location ──
       if (userLat && userLng) {
         const blueIcon = L.divIcon({
           html: `<div style="width:18px;height:18px;">
@@ -295,24 +360,16 @@ function ParkMap({ destLat, destLng, userLat, userLng, label }) {
               <circle cx="9" cy="9" r="2.5" fill="white"/>
             </svg>
           </div>`,
-          className: "",
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
+          className: "", iconSize: [18, 18], iconAnchor: [9, 9],
         });
-
         L.marker([userLat, userLng], { icon: blueIcon })
           .addTo(map)
           .bindPopup(`<span style="font-family:sans-serif;font-size:12px">📍 You are here</span>`);
 
-        // Draw a dashed line between user and destination
         L.polyline([[userLat, userLng], [destLat, destLng]], {
-          color: "#F7C948",
-          weight: 2,
-          dashArray: "6, 8",
-          opacity: 0.7,
+          color: "#F7C948", weight: 2, dashArray: "6, 8", opacity: 0.7,
         }).addTo(map);
 
-        // Fit bounds to show both pins
         const bounds = L.latLngBounds([[userLat, userLng], [destLat, destLng]]);
         map.fitBounds(bounds, { padding: [40, 40] });
       }
@@ -321,14 +378,10 @@ function ParkMap({ destLat, destLng, userLat, userLng, label }) {
     };
 
     loadLeaflet().catch(console.error);
-
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
     };
-  }, [destLat, destLng, userLat, userLng, label]);
+  }, [destLat, destLng, userLat, userLng, label, history]);
 
   return <div ref={mapRef} className="map-container" />;
 }
@@ -344,7 +397,7 @@ export default function StreetParkInfo() {
   const [signedUp, setSignedUp]     = useState(false);
   const [signupErr, setSignupErr]   = useState(null);
   const [checkoutBusy, setCheckoutBusy] = useState(null);
-  const [selectedEstab, setSelectedEstab] = useState(null); // for establishment drill-down
+  const [selectedEstab, setSelectedEstab] = useState(null);
 
   const [cleaning, setCleaning] = useState([]);
   const [films, setFilms]       = useState([]);
@@ -352,7 +405,55 @@ export default function StreetParkInfo() {
   const [weather, setWeather]   = useState(null);
   const [asp, setAsp]           = useState(null);
 
+  // ── FREE SEARCH GATE ──────────────────────────────────────────────────────
+  // 2 free searches, then paywall. Stored in sessionStorage so it resets per session.
+  const [searchCount, setSearchCount] = useState(() => {
+    return parseInt(sessionStorage.getItem("spi_searches") || "0");
+  });
+  const [isSubscribed, setIsSubscribed] = useState(() => {
+    return localStorage.getItem("spi_subscribed") === "true";
+  });
+  const [showPaywall, setShowPaywall] = useState(false);
+
+  // ── SAVED SEARCHES ────────────────────────────────────────────────────────
+  const MAX_SAVED = 20;
+  const [savedSearches, setSavedSearches] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("spi_saved") || "[]"); } catch { return []; }
+  });
+  const [showHistory, setShowHistory] = useState(false);
+
+  const saveSearch = (loc) => {
+    if (!isSubscribed) return; // only save for subscribers
+    const entry = {
+      id: Date.now(),
+      label: loc.label || loc.street,
+      street: loc.street,
+      borough: loc.borough || "",
+      neighborhood: loc.neighborhood || "",
+      lat: loc.lat,
+      lng: loc.lng,
+      type: loc.isEstablishment ? "establishment" : loc.isPark ? "park" : loc.isZip ? "zip" : "location",
+      ts: new Date().toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }),
+    };
+    const updated = [entry, ...savedSearches.filter(s => s.label !== entry.label)].slice(0, MAX_SAVED);
+    setSavedSearches(updated);
+    localStorage.setItem("spi_saved", JSON.stringify(updated));
+  };
+
+  const clearHistory = () => {
+    setSavedSearches([]);
+    localStorage.removeItem("spi_saved");
+  };
+
   const today = todayAbbr();
+
+  // Auto-trigger GPS if launched from home screen with ?gps=1
+  useEffect(() => {
+    if (window.__AUTO_GPS__) {
+      window.__AUTO_GPS__ = false;
+      setTimeout(() => handleGPS(), 500);
+    }
+  }, [handleGPS]);
 
   const resetHome = () => {
     setPhase("home"); setLocData(null); setSignedUp(false);
@@ -369,8 +470,8 @@ export default function StreetParkInfo() {
     setCoords({ lat: loc.lat, lng: loc.lng });
     setSelectedEstab(null);
     setPhase("loading");
+    saveSearch(loc);
 
-    // Determine which streets to fetch cleaning data for
     const streetsToFetch =
       loc.isPark && loc.parkStreets?.length ? loc.parkStreets :
       loc.isZip  && loc.zipStreets?.length  ? loc.zipStreets  :
@@ -390,32 +491,38 @@ export default function StreetParkInfo() {
     setWeather (wx.status === "fulfilled" ? wx.value : null);
     setAsp     (a.status === "fulfilled" ? a.value : null);
     setPhase("dash");
-  }, []);
-
-  // Load cleaning for a specific establishment location
-  const loadEstablishment = useCallback(async (estab) => {
-    setSelectedEstab(estab);
-    const cleaning = await getCleaning(estab.street, estab.lat, estab.lng);
-    setCleaning(cleaning.map(c => ({ ...c, street: estab.street })));
-  }, []);
+  }, [savedSearches, isSubscribed]);
 
   const handleSearch = useCallback(async () => {
     const q = query.trim();
     if (!q) return;
+
+    // Search gate — 2 free searches then paywall
+    if (!isSubscribed && searchCount >= 2) {
+      setShowPaywall(true);
+      return;
+    }
+
+    // Increment search count
+    const newCount = searchCount + 1;
+    setSearchCount(newCount);
+    sessionStorage.setItem("spi_searches", String(newCount));
+
     setErr(null); setPhase("loading");
     try {
       const loc = await geocode(q, coords?.lat, coords?.lng);
       if (loc.isEstablishment) {
-        // Show establishment list view
         setLocData(loc);
         setCoords({ lat: loc.establishments[0]?.lat || 40.7580, lng: loc.establishments[0]?.lng || -73.9855 });
+        if (isSubscribed) saveSearch(loc);
+        const newCount2 = newCount;
         setPhase("dash");
         setCleaning([]); setFilms([]); setEvents([]); setWeather(null); setAsp(null);
       } else {
         await loadAll(loc);
       }
     } catch (e) { setErr(e.message); setPhase("home"); }
-  }, [query, coords, loadAll]);
+  }, [query, coords, loadAll, searchCount, isSubscribed, savedSearches]);
 
   const handleGPS = useCallback(() => {
     setErr(null);
@@ -498,6 +605,11 @@ export default function StreetParkInfo() {
             <strong>Search any street, zip, neighborhood, park, or business.</strong>
           </p>
           <div className="search-wrap">
+            {!isSubscribed && searchCount > 0 && (
+              <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:searchCount>=2?"var(--red)":"var(--yellow)",letterSpacing:".08em",marginBottom:10,textAlign:"center"}}>
+                {searchCount>=2 ? "⚠ You've used both free searches — subscribe to continue" : `${2-searchCount} free search remaining`}
+              </div>
+            )}
             <div className="search-box">
               <input
                 type="text"
@@ -554,15 +666,57 @@ export default function StreetParkInfo() {
                 userLat={coords?.lat !== locData.lat ? coords?.lat : null}
                 userLng={coords?.lng !== locData.lng ? coords?.lng : null}
                 label={selectedEstab?.name || locData.label || locData.street}
+                history={showHistory && isSubscribed ? savedSearches.filter(s => s.label !== (locData.label || locData.street)) : []}
               />
               <div className="map-legend">
                 <div className="map-legend-item"><div className="map-dot red" /><span>Parking destination</span></div>
                 {coords?.lat && coords.lat !== locData.lat && (
                   <div className="map-legend-item"><div className="map-dot blue" /><span>Your location</span></div>
                 )}
+                {showHistory && isSubscribed && savedSearches.length > 0 && (
+                  <div className="map-legend-item"><div className="map-dot" style={{background:"#38A169"}} /><span>Previous searches</span></div>
+                )}
               </div>
             </div>
           )}
+
+          {/* HISTORY TOGGLE — below map */}
+          <div style={{marginBottom:16}}>
+            <label className="history-toggle">
+              <input
+                type="checkbox"
+                checked={showHistory}
+                onChange={e => {
+                  if (!isSubscribed) { setShowPaywall(true); return; }
+                  setShowHistory(e.target.checked);
+                }}
+              />
+              <span className="history-toggle-label">Show my previous searches</span>
+            </label>
+            {!isSubscribed && (
+              <div className="history-toggle-sub">🔒 Subscribers only — upgrade to save searches</div>
+            )}
+            {showHistory && isSubscribed && savedSearches.length === 0 && (
+              <div className="history-toggle-sub">No saved searches yet — they appear here after your next search</div>
+            )}
+            {showHistory && isSubscribed && savedSearches.length > 0 && (
+              <div className="history-list">
+                {savedSearches.map((s, i) => (
+                  <div key={s.id} className="history-item" onClick={() => { setQuery(s.label); handleSearch(); }}>
+                    <div className="history-item-left">
+                      <div className={`history-dot ${s.type !== "establishment" ? "area" : ""}`} />
+                      <div>
+                        <div className="history-item-label">{s.label}</div>
+                        <div className="history-item-meta">{s.borough}{s.neighborhood ? ` · ${s.neighborhood}` : ""}</div>
+                      </div>
+                    </div>
+                    <div className="history-item-ts">{s.ts}</div>
+                  </div>
+                ))}
+                <button className="history-clear" onClick={clearHistory}>Clear history</button>
+              </div>
+            )}
+          </div>
 
           {/* GPS prompt if no user location */}
           {!coords?.lat && phase === "dash" && !locData.isEstablishment && (
@@ -758,6 +912,60 @@ export default function StreetParkInfo() {
             ))}
           </div>
 
+        </div>
+      )}
+
+      {/* FREE SEARCH COUNTER — subtle badge on home screen */}
+      {phase === "home" && !isSubscribed && searchCount > 0 && (
+        <div style={{position:"fixed",bottom:24,right:20,fontFamily:"var(--mono)",fontSize:".6rem",color:searchCount>=2?"var(--red)":"var(--muted)",letterSpacing:".08em",background:"var(--g2)",border:`1px solid ${searchCount>=2?"var(--red)":"#2a2a2a"}`,padding:"6px 12px",zIndex:100}}>
+          {searchCount>=2 ? "⚠ FREE SEARCHES USED" : `${2-searchCount} free search${2-searchCount===1?"":"es"} remaining`}
+        </div>
+      )}
+
+      {/* PAYWALL MODAL */}
+      {showPaywall && (
+        <div className="paywall-overlay" onClick={() => setShowPaywall(false)}>
+          <div className="paywall-sheet" onClick={e => e.stopPropagation()}>
+            <div className="paywall-icon">🚗</div>
+            <div className="paywall-title">UNLOCK STREET PARK INFO</div>
+            <div className="paywall-sub">
+              You've used your 2 free searches. Subscribe to keep searching,
+              save your history, and get SMS alerts before your car gets ticketed.
+            </div>
+            <div className="paywall-free-count">
+              ✓ 2 free searches used · Unlimited with subscription
+            </div>
+
+            {/* Apple In-App Purchase — shown on iOS PWA */}
+            <button className="paywall-apple" onClick={() => {
+              // Apple IAP bridge — will call native StoreKit when wrapped in native app
+              // For now, fall through to Stripe web checkout
+              handleCheckout("annual");
+            }}>
+               Subscribe with Apple
+            </button>
+
+            <div className="paywall-plans">
+              {[
+                { key:"monthly", name:"Monthly", price:"$2.99", per:"/mo", tag:null },
+                { key:"annual", name:"Annual", price:"$19", per:"/yr", tag:"SAVE 47%" },
+              ].map(p => (
+                <div key={p.key} className={`paywall-plan ${p.tag?"best":""}`} onClick={() => handleCheckout(p.key)}>
+                  <div className="paywall-plan-name">{p.name}</div>
+                  <div className="paywall-plan-price">{p.price}</div>
+                  <div className="paywall-plan-per">{p.per}</div>
+                  {p.tag && <div className="paywall-plan-tag">{p.tag}</div>}
+                </div>
+              ))}
+            </div>
+
+            <button className="paywall-cta" onClick={() => handleCheckout("annual")}>
+              START 30-DAY FREE TRIAL →
+            </button>
+            <button className="paywall-dismiss" onClick={() => setShowPaywall(false)}>
+              Maybe later
+            </button>
+          </div>
         </div>
       )}
     </>
