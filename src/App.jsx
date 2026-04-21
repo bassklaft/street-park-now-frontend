@@ -406,14 +406,30 @@ export default function StreetParkInfo() {
   const [asp, setAsp]           = useState(null);
 
   // ── FREE SEARCH GATE ──────────────────────────────────────────────────────
-  // 2 free searches, then paywall. Stored in sessionStorage so it resets per session.
   const [searchCount, setSearchCount] = useState(() => {
-    return parseInt(sessionStorage.getItem("spi_searches") || "0");
+    return parseInt(localStorage.getItem("spi_searches") || "0");
   });
   const [isSubscribed, setIsSubscribed] = useState(() => {
     return localStorage.getItem("spi_subscribed") === "true";
   });
   const [showPaywall, setShowPaywall] = useState(false);
+
+  const incrementSearch = () => {
+    const newCount = parseInt(localStorage.getItem("spi_searches") || "0") + 1;
+    localStorage.setItem("spi_searches", String(newCount));
+    setSearchCount(newCount);
+    return newCount;
+  };
+
+  const checkGate = () => {
+    if (isSubscribed) return true;
+    const current = parseInt(localStorage.getItem("spi_searches") || "0");
+    if (current >= 2) {
+      setShowPaywall(true);
+      return false;
+    }
+    return true;
+  };
 
   // ── SAVED SEARCHES ────────────────────────────────────────────────────────
   const MAX_SAVED = 20;
@@ -496,18 +512,8 @@ export default function StreetParkInfo() {
   const handleSearch = useCallback(async () => {
     const q = query.trim();
     if (!q) return;
-
-    // Search gate — 2 free searches then paywall
-    if (!isSubscribed && searchCount >= 2) {
-      setShowPaywall(true);
-      return;
-    }
-
-    // Increment search count
-    const newCount = searchCount + 1;
-    setSearchCount(newCount);
-    sessionStorage.setItem("spi_searches", String(newCount));
-
+    if (!checkGate()) return;
+    incrementSearch();
     setErr(null); setPhase("loading");
     try {
       const loc = await geocode(q, coords?.lat, coords?.lng);
@@ -515,18 +521,19 @@ export default function StreetParkInfo() {
         setLocData(loc);
         setCoords({ lat: loc.establishments[0]?.lat || 40.7580, lng: loc.establishments[0]?.lng || -73.9855 });
         if (isSubscribed) saveSearch(loc);
-        const newCount2 = newCount;
         setPhase("dash");
         setCleaning([]); setFilms([]); setEvents([]); setWeather(null); setAsp(null);
       } else {
         await loadAll(loc);
       }
     } catch (e) { setErr(e.message); setPhase("home"); }
-  }, [query, coords, loadAll, searchCount, isSubscribed, savedSearches]);
+  }, [query, coords, loadAll, isSubscribed, savedSearches]);
 
   const handleGPS = useCallback(() => {
     setErr(null);
+    if (!checkGate()) return;
     if (!navigator.geolocation) { setErr("Geolocation not available. Enter a street below."); return; }
+    incrementSearch();
     setPhase("loading");
     navigator.geolocation.getCurrentPosition(
       async ({ coords: { latitude: lat, longitude: lng } }) => {
@@ -680,28 +687,32 @@ export default function StreetParkInfo() {
             </div>
           )}
 
-          {/* HISTORY TOGGLE — below map */}
+          {/* HISTORY TOGGLE — always visible, locked for non-subscribers */}
           <div style={{marginBottom:16}}>
             <label className="history-toggle">
               <input
                 type="checkbox"
-                checked={showHistory}
+                checked={showHistory && isSubscribed}
                 onChange={e => {
                   if (!isSubscribed) { setShowPaywall(true); return; }
                   setShowHistory(e.target.checked);
                 }}
               />
-              <span className="history-toggle-label">Show my previous searches</span>
+              <span className="history-toggle-label">
+                Show my previous searches {!isSubscribed && "🔒"}
+              </span>
             </label>
             {!isSubscribed && (
-              <div className="history-toggle-sub">🔒 Subscribers only — upgrade to save searches</div>
+              <div className="history-toggle-sub" style={{cursor:"pointer"}} onClick={() => setShowPaywall(true)}>
+                Subscribe to save and view your search history on the map
+              </div>
             )}
             {showHistory && isSubscribed && savedSearches.length === 0 && (
               <div className="history-toggle-sub">No saved searches yet — they appear here after your next search</div>
             )}
             {showHistory && isSubscribed && savedSearches.length > 0 && (
               <div className="history-list">
-                {savedSearches.map((s, i) => (
+                {savedSearches.map((s) => (
                   <div key={s.id} className="history-item" onClick={() => { setQuery(s.label); handleSearch(); }}>
                     <div className="history-item-left">
                       <div className={`history-dot ${s.type !== "establishment" ? "area" : ""}`} />
