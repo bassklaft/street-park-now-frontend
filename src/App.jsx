@@ -51,6 +51,20 @@ async function getCleaning(street, lat, lng) {
     return r.ok ? r.json() : [];
   } catch { return []; }
 }
+
+// Batch version for neighborhoods/zips — one API call instead of N
+async function getCleaningBatch(streets, lat, lng, borough) {
+  try {
+    const p = new URLSearchParams({ streets: streets.join(",") });
+    if (lat && lng) { p.set("lat", lat); p.set("lng", lng); }
+    if (borough) p.set("borough", borough);
+    const r = await fetch(`${API}/api/cleaning-batch?${p}`);
+    if (!r.ok) return [];
+    const data = await r.json();
+    // Convert object to flat array with street labels
+    return streets.flatMap(s => (data[s] || []).map(c => ({ ...c, street: s })));
+  } catch { return []; }
+}
 async function getFilms(street, borough, lat, lng) {
   try {
     const p = new URLSearchParams({ street: street || "" });
@@ -421,8 +435,14 @@ export default function App() {
       (loc.isZip || loc.isNeighborhood) && loc.zipStreets?.length ? loc.zipStreets :
       loc.isGPS && loc.nearbyStreets?.length ? loc.nearbyStreets :
       [loc.street];
+
+    // Use batch for multiple streets — one Claude call instead of N, much faster
+    const cleaningCall = streets.length > 1
+      ? getCleaningBatch(streets, loc.lat, loc.lng, loc.borough)
+      : loadCleaningForStreets(streets, loc.lat, loc.lng);
+
     const [cR, fR, evR, wxR, aR] = await Promise.allSettled([
-      loadCleaningForStreets(streets, loc.lat, loc.lng),
+      cleaningCall,
       getFilms(loc.street, loc.borough, loc.lat, loc.lng), getEvents(loc.borough),
       getWeather(loc.lat, loc.lng), getASP(),
     ]);
