@@ -211,7 +211,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
         {[["#E53E3E","Move today/tomorrow"],["#F7C948","Move in 2-3 days"],["#38A169","Safe 4+ days"],["#444","No data"]].map(([c,l]) => (
           <div key={l} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:24,height:4,background:c,borderRadius:2}} />
-            <span style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)"}}>{l}</span>
+            <span style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--white)"}}>{l}</span>
           </div>
         ))}
       </div>
