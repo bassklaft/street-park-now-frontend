@@ -51,8 +51,14 @@ async function getCleaning(street, lat, lng) {
     return r.ok ? r.json() : [];
   } catch { return []; }
 }
-async function getFilms(street) {
-  try { const r = await fetch(`${API}/api/films?street=${encodeURIComponent(street)}`); return r.ok ? r.json() : []; } catch { return []; }
+async function getFilms(street, borough, lat, lng) {
+  try {
+    const p = new URLSearchParams({ street: street || "" });
+    if (borough) p.set("borough", borough);
+    if (lat && lng) { p.set("lat", lat); p.set("lng", lng); }
+    const r = await fetch(`${API}/api/films?${p}`);
+    return r.ok ? r.json() : [];
+  } catch { return []; }
 }
 async function getEvents(borough) {
   try { const r = await fetch(`${API}/api/events?borough=${encodeURIComponent(borough || "")}`); return r.ok ? r.json() : []; } catch { return []; }
@@ -344,7 +350,7 @@ export default function App() {
       [loc.street];
     const [cR, fR, evR, wxR, aR] = await Promise.allSettled([
       loadCleaningForStreets(streets, loc.lat, loc.lng),
-      getFilms(loc.street), getEvents(loc.borough),
+      getFilms(loc.street, loc.borough, loc.lat, loc.lng), getEvents(loc.borough),
       getWeather(loc.lat, loc.lng), getASP(),
     ]);
     setCleaning(cR.status === "fulfilled" ? cR.value : []);
@@ -657,9 +663,13 @@ export default function App() {
                 {films.length === 0 ? <div className="empty">No active film permits on your street this week.</div>
                   : films.map((f, i) => (
                     <div key={i} className="ev-card film">
-                      <div className="ev-type">🎬 {f.type} · {f.subtype}</div>
-                      <div className="ev-name">Film Permit</div>
-                      <div className="ev-meta">{fmtDT(f.start)} → {fmtDT(f.end)}{f.parkingHeld && <><br />Parking held: {f.parkingHeld.substring(0,140)}{f.parkingHeld.length>140?"…":""}</>}</div>
+                      <div className="ev-type">🎬 {f.type}{f.subtype && f.subtype !== f.type ? ` · ${f.subtype}` : ""}</div>
+                      <div className="ev-name">{f.address || "Film Permit"}</div>
+                      <div className="ev-meta">
+                        {fmtDT(f.start)} → {fmtDT(f.end)}
+                        {f.borough && ` · ${f.borough}`}
+                        {f.parkingHeld && <><br />🚫 No parking: {f.parkingHeld.substring(0,160)}{f.parkingHeld.length>160?"…":""}</>}
+                      </div>
                       <span className="ev-impact">⚠ Parking restricted during shoot</span>
                     </div>
                   ))}
