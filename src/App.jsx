@@ -561,7 +561,7 @@ export default function App() {
       {phase === "home" && (
         <div className="home">
           <h1 className="h1">KNOW BEFORE<br /><em>YOU PARK.</em></h1>
-          <p className="sub">Street cleaning · Film shoots · Events · Weather<br /><strong>Search any street, zip, neighborhood, park, or business.</strong></p>
+          <p className="sub">Street cleaning · Film shoots · Events · Weather<br /><strong>NYC · LA · Chicago · SF · Boston · Philly · DC · Seattle</strong></p>
           <div className="search-wrap">
             {!isSubscribed && searchCount > 0 && (
               <div className="gate-note" style={{color: remaining === 0 ? "var(--red)" : "var(--yellow)"}}>
@@ -569,7 +569,7 @@ export default function App() {
               </div>
             )}
             <div className="search-box">
-              <input type="text" placeholder="Broadway, 11211, Central Park, McDonald's, intrepid…" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} autoFocus />
+              <input type="text" placeholder="Broadway, Wicker Park, Silver Lake, 90210, Fenway…" value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} autoFocus />
               <button onClick={handleSearch}>LOOK UP</button>
             </div>
             <div className="or">— or —</div>
