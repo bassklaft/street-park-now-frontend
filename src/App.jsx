@@ -414,14 +414,14 @@ export default function StreetParkInfo() {
   });
   const [showPaywall, setShowPaywall] = useState(false);
 
-  const incrementSearch = () => {
+  const incrementSearch = useCallback(() => {
     const newCount = parseInt(localStorage.getItem("spi_searches") || "0") + 1;
     localStorage.setItem("spi_searches", String(newCount));
     setSearchCount(newCount);
     return newCount;
-  };
+  }, []);
 
-  const checkGate = () => {
+  const checkGate = useCallback(() => {
     if (isSubscribed) return true;
     const current = parseInt(localStorage.getItem("spi_searches") || "0");
     if (current >= 2) {
@@ -429,7 +429,7 @@ export default function StreetParkInfo() {
       return false;
     }
     return true;
-  };
+  }, [isSubscribed]);
 
   // ── SAVED SEARCHES ────────────────────────────────────────────────────────
   const MAX_SAVED = 20;
