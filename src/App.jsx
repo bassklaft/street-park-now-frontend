@@ -253,7 +253,16 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .p-cta{margin-top:13px;display:block;width:100%;text-align:center;background:var(--black);color:var(--yellow);font-family:var(--display);font-size:1.1rem;letter-spacing:.1em;padding:10px;border:none;cursor:pointer;transition:opacity .15s}
 .p-cta:hover{opacity:.8}
 .empty{font-family:var(--mono);font-size:.68rem;color:#444;padding:14px 0}
-.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end;justify-content:center}
+.ambiguous-wrap{min-height:calc(100vh - 60px);padding:32px 24px;max-width:600px;margin:0 auto;animation:up .3s ease;}
+.ambiguous-title{font-family:var(--display);font-size:2rem;letter-spacing:.04em;margin-bottom:6px;}
+.ambiguous-sub{font-family:var(--mono);font-size:.65rem;color:var(--muted);letter-spacing:.06em;margin-bottom:24px;}
+.ambiguous-category{font-family:var(--mono);font-size:.6rem;color:var(--yellow);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px;margin-top:20px;}
+.ambiguous-option{display:flex;align-items:center;justify-content:space-between;background:var(--g2);border:1px solid #2a2a2a;padding:14px 18px;margin-bottom:6px;cursor:pointer;transition:border-color .15s;}
+.ambiguous-option:hover{border-color:var(--yellow);}
+.ambiguous-option-label{font-family:var(--body);font-size:1.05rem;font-weight:600;color:var(--white);}
+.ambiguous-option-meta{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-top:2px;}
+.ambiguous-arrow{font-family:var(--mono);font-size:.8rem;color:var(--muted);}
+inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end;justify-content:center}
 .paywall-sheet{background:var(--g2);border-top:3px solid var(--yellow);padding:32px 24px 48px;width:100%;max-width:500px;animation:slideUp .3s ease}
 .paywall-icon{font-size:2.5rem;margin-bottom:12px}
 .paywall-title{font-family:var(--display);font-size:2.2rem;letter-spacing:.04em;margin-bottom:8px}
@@ -351,6 +360,11 @@ export default function App() {
     setErr(null); setPhase("loading");
     try {
       const loc = await geocode(q, coords?.lat, coords?.lng);
+      if (loc.type === "ambiguous") {
+        setLocData(loc);
+        setPhase("ambiguous");
+        return;
+      }
       if (loc.isEstablishment) {
         setLocData(loc);
         setCoords({ lat: loc.establishments[0]?.lat || 40.758, lng: loc.establishments[0]?.lng || -73.9855 });
@@ -455,6 +469,36 @@ export default function App() {
       {/* LOADING */}
       {phase === "loading" && (
         <div className="loading"><div className="spin" /><div className="loading-lbl">Scanning NYC databases…</div></div>
+      )}
+
+      {/* AMBIGUOUS PICKER */}
+      {phase === "ambiguous" && locData?.options && (
+        <div className="ambiguous-wrap">
+          <div className="ambiguous-title">Did you mean…</div>
+          <div className="ambiguous-sub">"{locData.originalQuery}" could refer to a few things in NYC. Pick one:</div>
+          {Object.entries(
+            locData.options.reduce((acc, opt) => {
+              const cat = opt.category || "Other";
+              if (!acc[cat]) acc[cat] = [];
+              acc[cat].push(opt);
+              return acc;
+            }, {})
+          ).map(([category, options]) => (
+            <div key={category}>
+              <div className="ambiguous-category">{category}</div>
+              {options.map((opt, i) => (
+                <div key={i} className="ambiguous-option" onClick={() => loadAll(opt)}>
+                  <div>
+                    <div className="ambiguous-option-label">{opt.label}</div>
+                    <div className="ambiguous-option-meta">{opt.borough}{opt.neighborhood ? ` · ${opt.neighborhood}` : ""}</div>
+                  </div>
+                  <span className="ambiguous-arrow">→</span>
+                </div>
+              ))}
+            </div>
+          ))}
+          <button className="re-btn" style={{marginTop:24}} onClick={resetHome}>← Back to search</button>
+        </div>
       )}
 
       {/* DASHBOARD */}
