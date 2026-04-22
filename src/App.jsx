@@ -352,7 +352,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
         </div>
       )}
       <div style={{display:"flex",gap:16,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",flexWrap:"wrap"}}>
-        {[["#E53E3E","Move today/tomorrow"],["#F7C948","Move in 2-3 days"],["#38A169","Safe 4+ days"],["#444","No data"]].map(([c,l]) => (
+        {[["#E53E3E","Move Today/Tomorrow"],["#F7C948","Move In 2-3 Days"],["#38A169","Safe 4+ Days"],["#444","No Data"]].map(([c,l]) => (
           <div key={l} style={{display:"flex",alignItems:"center",gap:6}}>
             <div style={{width:24,height:4,background:c,borderRadius:2}} />
             <span style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--white)"}}>{l}</span>
@@ -921,7 +921,7 @@ export default function App() {
           {homeMapCoords && (
             <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
               <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>
-                🗺 Live parking heat map · tap a street to search it
+                🔥🗺 LIVE PARKING HEAT MAP · USE THE MAP OR SEARCH BAR
               </div>
               <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} onStreetClick={(street) => { setQuery(street); handleSearch(); }} />
             </div>
@@ -938,7 +938,7 @@ export default function App() {
             {[
               { icon:"🗺", title:"Live Parking Heat Map", sub:"Color-coded streets show where parking is safest near you right now." },
               { icon:"🧹", title:"Street Cleaning Schedules", sub:"Know exactly when to move your car — with upcoming dates so you're never caught off guard." },
-              { icon:"🎬", title:"Film & TV Shoot Permits", sub:"No parking signs stapled to poles are easy to miss. We surface shoot permits before you even arrive." },
+              { icon:"🎬", title:"Film & TV Shoot Schedules", sub:"No parking signs stapled to poles are easy to miss. We surface shoot permits before you even arrive." },
               { icon:"📅", title:"Public Events & Closures", sub:"Marathons, parades, street fairs — any permitted event that could impact your parking." },
               { icon:"🌤", title:"Weather Alerts", sub:"Snow emergencies and heavy rain trigger special parking rules. We flag them in advance." },
             ].map((f, i) => (
