@@ -488,6 +488,7 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .p-cta{margin-top:13px;display:block;width:100%;text-align:center;background:var(--black);color:var(--yellow);font-family:var(--display);font-size:1.1rem;letter-spacing:.1em;padding:10px;border:none;cursor:pointer;transition:opacity .15s}
 .p-cta:hover{opacity:.8}
 .empty{font-family:var(--mono);font-size:.68rem;color:#444;padding:14px 0}
+.app-tagline{font-family:var(--body);font-size:1.1rem;color:var(--muted);letter-spacing:.06em;margin-bottom:12px;font-weight:400}
 .cities-sub{font-family:var(--mono);font-size:.65rem;color:var(--yellow);letter-spacing:.1em;margin-bottom:24px}
 .search-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--g2);border:1px solid var(--yellow);border-top:none;z-index:9999}
 .search-dropdown-item{display:flex;align-items:center;padding:14px 16px;cursor:pointer;transition:background .15s}
@@ -773,7 +774,7 @@ export default function App() {
 
       {/* NAV */}
       <nav className="nav">
-        <div className="logo" onClick={resetHome} style={{cursor:"pointer"}}>STREET PARK <span>INFO</span></div>
+        <div className="logo" onClick={resetHome} style={{cursor:"pointer"}}>MOVE YOUR <span>CAR</span></div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <span className="pill">NYC+</span>
           {phase === "dash" && <button className="pill ghost" onClick={resetHome}>↺ CHANGE</button>}
@@ -788,7 +789,8 @@ export default function App() {
       {phase === "home" && (
         <div className="home">
           {/* HERO */}
-          <h1 className="h1">KNOW BEFORE<br /><em>YOU PARK.</em></h1>
+          <h1 className="h1">MOVE YOUR<br /><em>CAR.</em></h1>
+          <p className="app-tagline">Street Parking Info For Your City</p>
           <p className="sub">Street cleaning · Film shoots · Events · Weather — every reason you'd get a ticket, all in one place.</p>
           <p className="cities-sub">NYC · LA · Chicago · SF · Boston · Philly · DC · Seattle</p>
 
@@ -854,10 +856,10 @@ export default function App() {
             </div>
           </div>
 
-          {/* WE'LL MOVE YOUR CAR */}
+          {/* WE'LL MOVE MY CAR */}
           <div className="move-car-banner">
             <span className="move-car-badge">COMING SOON</span>
-            <div className="move-car-title">🚗 WE'LL MOVE YOUR CAR</div>
+            <div className="move-car-title">🚗 WE'LL MOVE MY CAR</div>
             <div className="move-car-sub">
               Can't move your car in time? We'll send a trusted driver to move it for you.<br/>
               Available for vehicles with smart key access · Safe, insured, background-checked drivers.
@@ -1161,7 +1163,7 @@ export default function App() {
         <div className="paywall-overlay" onClick={() => setShowPaywall(false)}>
           <div className="paywall-sheet" onClick={e => e.stopPropagation()}>
             <div className="paywall-icon">🚗</div>
-            <div className="paywall-title">UNLOCK STREET PARK INFO</div>
+            <div className="paywall-title">UNLOCK MOVE MY CAR</div>
             <div className="paywall-sub">You've used your 2 free searches. Subscribe to keep searching, save your history, and get SMS alerts before your car gets ticketed.</div>
             <button className="paywall-apple" onClick={() => handleCheckout("annual")}> Subscribe with Apple</button>
             <div className="paywall-plans">

@@ -1,34 +1,13 @@
 {
-  "name": "Street Park Info",
-  "short_name": "Home",
-  "description": "NYC parking intelligence — street cleaning, film permits, events, weather",
+  "name": "Move My Car",
+  "short_name": "Move My Car",
+  "description": "Street parking info for your city",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0a0a0a",
-  "theme_color": "#F7C948",
-  "categories": ["navigation", "utilities"],
+  "background_color": "#080808",
+  "theme_color": "#080808",
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Find Parking Near Me",
-      "short_name": "Near Me",
-      "description": "Use GPS to find parking info for your current location",
-      "url": "/?gps=1",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }

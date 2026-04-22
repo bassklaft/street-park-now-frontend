@@ -2,60 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-    <!-- PWA / Mobile -->
-    <meta name="theme-color" content="#F7C948" />
-    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#080808" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Home" />
-
-    <!-- SEO -->
-    <meta name="description" content="NYC parking intelligence. Street cleaning schedules, film permits, events, and weather — before you park." />
-    <meta property="og:title" content="Street Park Info" />
-    <meta property="og:description" content="Know before you park. NYC street cleaning, film shoots, events, and weather in one place." />
-    <meta property="og:type" content="website" />
-
-    <title>Street Park Info — Home</title>
-
-    <!-- PWA Manifest -->
+    <meta name="apple-mobile-web-app-title" content="Move My Car" />
+    <meta name="description" content="Street parking info for your city. Know before you park." />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
-
-    <!-- Apple Touch Icon (inline SVG as data URI) -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230a0a0a'/%3E%3Ctext x='256' y='360' font-family='Georgia%2C serif' font-size='340' font-weight='700' fill='%23F7C948' text-anchor='middle'%3EP%3C/text%3E%3Ccircle cx='256' cy='440' r='22' fill='%23F7C948'/%3E%3C/svg%3E" />
-
-    <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0a'/%3E%3Ctext x='16' y='24' font-family='Georgia%2C serif' font-size='22' font-weight='700' fill='%23F7C948' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E" />
-
-    <!-- Splash screen color for iOS -->
-    <style>
-      body { background: #0a0a0a; }
-      /* Safe area insets for iPhone notch/home indicator */
-      #root {
-        padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
-      }
-    </style>
+    <title>Move My Car — Street Parking Info For Your City</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-
-    <!-- Register Service Worker -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.log('SW failed:', err));
-        });
-      }
-
-      // Auto-trigger GPS if app launched from home screen shortcut
-      if (new URLSearchParams(window.location.search).get('gps') === '1') {
-        window.__AUTO_GPS__ = true;
-      }
-    </script>
   </body>
 </html>
