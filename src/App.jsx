@@ -936,11 +936,11 @@ export default function App() {
           {/* FEATURES */}
           <div className="features-section">
             {[
+              { icon:"🗺", title:"Live Parking Heat Map", sub:"Color-coded streets show where parking is safest near you right now." },
               { icon:"🧹", title:"Street Cleaning Schedules", sub:"Know exactly when to move your car — with upcoming dates so you're never caught off guard." },
               { icon:"🎬", title:"Film & TV Shoot Permits", sub:"No parking signs stapled to poles are easy to miss. We surface shoot permits before you even arrive." },
               { icon:"📅", title:"Public Events & Closures", sub:"Marathons, parades, street fairs — any permitted event that could impact your parking." },
               { icon:"🌤", title:"Weather Alerts", sub:"Snow emergencies and heavy rain trigger special parking rules. We flag them in advance." },
-              { icon:"🗺", title:"Live Parking Heat Map", sub:"Color-coded streets show where parking is safest near you right now." },
             ].map((f, i) => (
               <div key={i} className="feature-row">
                 <div className="feature-icon">{f.icon}</div>
