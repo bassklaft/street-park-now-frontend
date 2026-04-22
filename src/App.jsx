@@ -920,8 +920,8 @@ export default function App() {
           {/* HEAT MAP */}
           {homeMapCoords && (
             <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>
-                🔥🗺 LIVE PARKING HEAT MAP · USE THE MAP OR SEARCH BAR
+              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
+                TAP THE LIVE PARKING HEAT MAP 🔥🗺 · OR SEARCH BAR
               </div>
               <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} onStreetClick={(street) => { setQuery(street); handleSearch(); }} />
             </div>
