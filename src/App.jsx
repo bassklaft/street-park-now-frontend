@@ -374,22 +374,41 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .pill{font-family:var(--mono);font-size:.6rem;letter-spacing:.12em;padding:4px 9px;background:var(--yellow);color:var(--black)}
 .pill.ghost{background:none;border:1px solid #333;color:#777;cursor:pointer;transition:all .15s}
 .pill.ghost:hover{border-color:#666;color:var(--white)}
-.home{min-height:calc(100vh - 60px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;animation:up .4s ease}
-.h1{font-family:var(--display);font-size:clamp(3rem,9vw,5.5rem);letter-spacing:.04em;line-height:.92;margin-bottom:16px}
+.home{min-height:calc(100vh - 90px);display:flex;flex-direction:column;align-items:center;padding:0 0 60px;animation:up .4s ease;overflow:hidden}
+.hero-section{width:100%;background:linear-gradient(135deg,#0a0a0a 0%,#111 100%);padding:40px 24px 48px;text-align:center;border-bottom:1px solid #1f1f1f}
+.h1{font-family:var(--display);font-size:clamp(3.2rem,10vw,5.5rem);letter-spacing:.04em;line-height:.95;margin-bottom:12px;white-space:nowrap}
 .h1 em{color:var(--yellow);font-style:normal}
-.sub{font-family:var(--mono);font-size:.72rem;color:var(--muted);letter-spacing:.08em;line-height:1.8;max-width:420px;margin:0 auto 32px}
-.sub strong{color:var(--white)}
-.search-wrap{width:100%;max-width:540px}
+.app-tagline{font-family:var(--body);font-size:1.1rem;color:#888;letter-spacing:.06em;margin-bottom:28px}
+.search-section{width:100%;max-width:560px;padding:0 20px}
 .gate-note{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-align:center;margin-bottom:10px}
-.search-box{display:flex;border:2px solid var(--yellow);background:var(--g2)}
+.search-box{display:flex;border:2px solid var(--yellow);background:var(--g2);border-radius:4px;overflow:hidden}
 .search-box input{flex:1;background:none;border:none;outline:none;color:var(--white);font-family:var(--mono);font-size:.9rem;padding:14px 18px;letter-spacing:.04em}
 .search-box input::placeholder{color:#444}
 .search-box button{background:var(--yellow);border:none;cursor:pointer;font-family:var(--display);font-size:1.4rem;letter-spacing:.1em;padding:0 22px;transition:background .15s;white-space:nowrap}
 .search-box button:hover{background:var(--yd)}
-.or{font-family:var(--mono);font-size:.65rem;color:#444;letter-spacing:.1em;margin:16px 0}
-.gps-btn{background:none;border:1px solid #333;color:#888;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;padding:10px 20px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px}
-.gps-btn:hover{border-color:var(--yellow);color:var(--yellow)}
-.err{font-family:var(--mono);font-size:.68rem;color:var(--red);margin-top:14px;max-width:440px}
+/* CAROUSEL */
+.carousel-section{width:100%;padding:24px 0;border-bottom:1px solid #1f1f1f;overflow:hidden}
+.carousel-label{font-family:var(--mono);font-size:.6rem;color:var(--yellow);letter-spacing:.15em;text-transform:uppercase;text-align:center;margin-bottom:14px}
+.carousel-track{display:flex;gap:12px;animation:scrollLeft 30s linear infinite;width:max-content;padding:0 12px}
+.carousel-track:hover{animation-play-state:paused}
+.carousel-card{background:var(--g2);border:1px solid #2a2a2a;border-radius:8px;padding:16px 20px;min-width:200px;flex-shrink:0}
+.carousel-card-city{font-family:var(--mono);font-size:.58rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.carousel-card-num{font-family:var(--display);font-size:1.8rem;color:var(--red);line-height:1;margin-bottom:4px}
+.carousel-card-meta{font-family:var(--mono);font-size:.58rem;color:var(--muted);line-height:1.5}
+.carousel-card-meta strong{color:var(--white)}
+@keyframes scrollLeft{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+/* FEATURES */
+.features-section{width:100%;padding:32px 24px;max-width:560px}
+.feature-row{display:flex;gap:16px;align-items:flex-start;margin-bottom:28px}
+.feature-icon{font-size:2rem;flex-shrink:0;width:48px;text-align:center}
+.feature-text-title{font-family:var(--body);font-size:1.1rem;font-weight:700;color:var(--white);margin-bottom:4px}
+.feature-text-sub{font-family:var(--mono);font-size:.62rem;color:var(--muted);line-height:1.6;letter-spacing:.03em}
+/* MOVE CAR BANNER */
+.move-car-banner{width:100%;max-width:560px;margin:0 24px;background:linear-gradient(135deg,#0a0a1a 0%,#0a0a0a 100%);border:1px solid #3a3a6a;border-radius:8px;padding:20px;position:relative;overflow:hidden}
+.move-car-badge{position:absolute;top:0;right:0;background:#3a3a6a;color:#aaaaff;font-family:var(--mono);font-size:.55rem;letter-spacing:.12em;padding:3px 10px;border-radius:0 8px 0 8px}
+.move-car-title{font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:#aaaaff;margin-bottom:6px;margin-top:8px}
+.move-car-sub{font-family:var(--mono);font-size:.62rem;color:#666;letter-spacing:.04em;line-height:1.6}
+.cities-sub{font-family:var(--mono);font-size:.65rem;color:var(--yellow);letter-spacing:.1em;margin-bottom:24px}
 .loading{min-height:calc(100vh - 60px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 .spin{width:44px;height:44px;border:3px solid #222;border-top-color:var(--yellow);border-radius:50%;animation:spin .7s linear infinite}
 .loading-lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
@@ -788,56 +807,51 @@ export default function App() {
       {/* HOME */}
       {phase === "home" && (
         <div className="home">
-          {/* HERO */}
-          <h1 className="h1">MOVE MY<br /><em>CAR.</em></h1>
-          <p className="app-tagline">Street Parking Info For Your City</p>
-          <p className="sub">Street cleaning · Film shoots · Events · Weather — every reason you'd get a ticket, all in one place.</p>
-          <p className="cities-sub">NYC · LA · Chicago · SF · Boston · Philly · DC · Seattle</p>
 
-          {/* SEARCH with dropdown */}
-          <div className="search-wrap">
-            {!isSubscribed && searchCount > 0 && (
-              <div className="gate-note" style={{color: remaining === 0 ? "var(--red)" : "var(--yellow)"}}>
-                {remaining === 0 ? "⚠ Free searches used — subscribe to continue" : `${remaining} free search${remaining === 1 ? "" : "es"} remaining`}
+          {/* HERO */}
+          <div className="hero-section">
+            <h1 className="h1">MOVE MY <em>CAR.</em></h1>
+            <p className="app-tagline">Street Parking Info For Your City</p>
+            <div className="search-section">
+              {!isSubscribed && searchCount > 0 && (
+                <div className="gate-note" style={{color: remaining === 0 ? "var(--red)" : "var(--yellow)"}}>
+                  {remaining === 0 ? "⚠ Free searches used — subscribe to continue" : `${remaining} free search${remaining === 1 ? "" : "es"} remaining`}
+                </div>
+              )}
+              <div style={{position:"relative"}}>
+                <div className="search-box">
+                  <PlacesInput
+                    value={query}
+                    onChange={setQuery}
+                    onPlaceSelect={handlePlaceSelect}
+                    onFocus={handleSearchFocus}
+                    onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                    onEnter={handleSearch}
+                    onGPSClick={handleGPS}
+                    showDropdown={searchFocused && !query}
+                  />
+                  <button onClick={handleSearch}>GO</button>
+                </div>
               </div>
-            )}
-            <div className="search-box-wrap" style={{position:"relative"}}>
-              <div className="search-box">
-                <PlacesInput
-                  value={query}
-                  onChange={setQuery}
-                  onPlaceSelect={handlePlaceSelect}
-                  onFocus={handleSearchFocus}
-                  onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-                  onEnter={handleSearch}
-                  onGPSClick={handleGPS}
-                  showDropdown={searchFocused && !query}
-                />
-                <button onClick={handleSearch}>LOOK UP</button>
-              </div>
+              {err && <div className="err">⚠ {err}</div>}
             </div>
-            {err && <div className="err">⚠ {err}</div>}
           </div>
 
           {/* HEAT MAP */}
           {homeMapCoords && (
-            <div style={{width:"100%",maxWidth:540,marginTop:20}}>
+            <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
               <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>
-                🗺 Parking heat map · tap a street to search it
+                🗺 Live parking heat map · tap a street to search it
               </div>
-              <HeatMap
-                userLat={homeMapCoords.lat}
-                userLng={homeMapCoords.lng}
-                onStreetClick={(street) => { setQuery(street); handleSearch(); }}
-              />
+              <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} onStreetClick={(street) => { setQuery(street); handleSearch(); }} />
             </div>
           )}
 
-          {/* PARKING TICKET STATS */}
-          <div className="stats-section">
-            <div className="stats-eyebrow">😤 Tired of expensive parking tickets?</div>
-            <div className="stats-grid">
-              {[
+          {/* SCROLLING STATS CAROUSEL */}
+          <div className="carousel-section">
+            <div className="carousel-label">😤 Tired of parking tickets? You're not alone.</div>
+            <div className="carousel-track">
+              {[...Array(2)].flatMap(() => [
                 { city:"New York City", tickets:"16,092,421", avg:"$65", total:"$1B+" },
                 { city:"Los Angeles", tickets:"3,800,000+", avg:"$73", total:"$280M+" },
                 { city:"Chicago", tickets:"3,200,000+", avg:"$60", total:"$192M+" },
@@ -846,14 +860,33 @@ export default function App() {
                 { city:"Philadelphia", tickets:"900,000+", avg:"$51", total:"$46M+" },
                 { city:"Washington DC", tickets:"1,200,000+", avg:"$100", total:"$120M+" },
                 { city:"Seattle", tickets:"500,000+", avg:"$47", total:"$24M+" },
-              ].map(s => (
-                <div key={s.city} className="stat-card">
-                  <div className="stat-city">{s.city}</div>
-                  <div className="stat-num">{s.tickets}</div>
-                  <div className="stat-meta">tickets/yr · avg {s.avg} · {s.total} collected</div>
+              ]).map((s, i) => (
+                <div key={i} className="carousel-card">
+                  <div className="carousel-card-city">{s.city}</div>
+                  <div className="carousel-card-num">{s.tickets}</div>
+                  <div className="carousel-card-meta">tickets/yr · avg <strong>{s.avg}</strong> · <strong>{s.total}</strong></div>
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* FEATURES */}
+          <div className="features-section">
+            {[
+              { icon:"🧹", title:"Street Cleaning Schedules", sub:"Know exactly when to move your car — with upcoming dates so you're never caught off guard." },
+              { icon:"🎬", title:"Film & TV Shoot Permits", sub:"No parking signs stapled to poles are easy to miss. We surface shoot permits before you even arrive." },
+              { icon:"📅", title:"Public Events & Closures", sub:"Marathons, parades, street fairs — any permitted event that could impact your parking." },
+              { icon:"🌤", title:"Weather Alerts", sub:"Snow emergencies and heavy rain trigger special parking rules. We flag them in advance." },
+              { icon:"🗺", title:"Live Parking Heat Map", sub:"Color-coded streets show where parking is safest near you right now." },
+            ].map((f, i) => (
+              <div key={i} className="feature-row">
+                <div className="feature-icon">{f.icon}</div>
+                <div>
+                  <div className="feature-text-title">{f.title}</div>
+                  <div className="feature-text-sub">{f.sub}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* WE'LL MOVE MY CAR */}
@@ -861,11 +894,12 @@ export default function App() {
             <span className="move-car-badge">COMING SOON</span>
             <div className="move-car-title">🚗 WE'LL MOVE MY CAR</div>
             <div className="move-car-sub">
-              Can't move your car in time? We'll send a trusted driver to move it for you.<br/>
-              Available for vehicles with smart key access · Safe, insured, background-checked drivers.
+              Can't move your car in time? We'll send a trusted driver.<br/>
+              Smart key access only · Insured, background-checked drivers.
               <span style={{color:"#aaaaff",marginTop:6,display:"block",cursor:"pointer"}}>Join the waitlist →</span>
             </div>
           </div>
+
         </div>
       )}
 
