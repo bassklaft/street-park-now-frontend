@@ -82,30 +82,46 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
   );
 }
 
-// ─── STORAGE (plain functions, no hooks) ──────────────────────────────────────
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+const Auth = {
+  getToken:    () => localStorage.getItem("spn_token"),
+  setToken:    (t) => localStorage.setItem("spn_token", t),
+  getUser:     () => { try { return JSON.parse(localStorage.getItem("spn_user") || "null"); } catch { return null; } },
+  setUser:     (u) => localStorage.setItem("spn_user", JSON.stringify(u)),
+  clear:       () => { ["spn_token","spn_user","spn_count"].forEach(k => localStorage.removeItem(k)); },
+  getTier:     () => { try { return JSON.parse(localStorage.getItem("spn_user")||"{}").tier || "anonymous"; } catch { return "anonymous"; } },
+  getCount:    () => parseInt(localStorage.getItem("spn_count") || "0"),
+  incCount:    () => { const n = Auth.getCount()+1; localStorage.setItem("spn_count", String(n)); return n; },
+  isLoggedIn:  () => !!localStorage.getItem("spn_token"),
+  isPaid:      () => ["basic","premium","unlimited"].includes(Auth.getTier()),
+  canSearch:   (count) => {
+    if (Auth.isPaid()) return true;
+    if (Auth.isLoggedIn()) return count < 8;
+    return count < 1;
+  },
+  authHeader:  () => ({ "Authorization": `Bearer ${Auth.getToken()}`, "Content-Type": "application/json" }),
+};
+
+// ─── STORAGE (kept for backwards compat) ─────────────────────────────────────
 const Storage = {
-  getCount:     () => parseInt(localStorage.getItem("spi_searches") || "0"),
-  incCount:     () => { const n = Storage.getCount() + 1; localStorage.setItem("spi_searches", String(n)); return n; },
-  isSubscribed: () => localStorage.getItem("spi_subscribed") === "true",
-  getSaved:     () => { try { return JSON.parse(localStorage.getItem("spi_saved") || "[]"); } catch { return []; } },
+  getCount:     () => Auth.getCount(),
+  incCount:     () => Auth.incCount(),
+  isSubscribed: () => Auth.isPaid(),
+  getSaved:     () => { try { return JSON.parse(localStorage.getItem("spn_saved") || "[]"); } catch { return []; } },
   saveSearch:   (loc) => {
-    if (!Storage.isSubscribed()) return null;
     const entry = {
-      id: Date.now(),
-      label: loc.label || loc.street,
-      street: loc.street,
-      borough: loc.borough || "",
-      neighborhood: loc.neighborhood || "",
+      id: Date.now(), label: loc.label || loc.street, street: loc.street,
+      borough: loc.borough || "", neighborhood: loc.neighborhood || "",
       lat: loc.lat, lng: loc.lng,
       type: loc.isEstablishment ? "establishment" : loc.isPark ? "park" : loc.isZip ? "zip" : "location",
       ts: new Date().toLocaleString("en-US", { month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }),
     };
     const prev = Storage.getSaved();
     const updated = [entry, ...prev.filter(s => s.label !== entry.label)].slice(0, 20);
-    localStorage.setItem("spi_saved", JSON.stringify(updated));
+    localStorage.setItem("spn_saved", JSON.stringify(updated));
     return updated;
   },
-  clearSaved: () => localStorage.removeItem("spi_saved"),
+  clearSaved: () => localStorage.removeItem("spn_saved"),
 };
 
 // ─── API HELPERS ──────────────────────────────────────────────────────────────
@@ -240,6 +256,11 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
     const initMap = () => {
       if (!alive || !ref.current || !window.google?.maps) return;
 
+      // Fire heatmap fetch IMMEDIATELY — don't wait for map to render
+      const heatmapPromise = fetch(`${API}/api/heatmap?lat=${userLat}&lng=${userLng}`)
+        .then(r => r.ok ? r.json() : [])
+        .catch(() => []);
+
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: userLat, lng: userLng },
         zoom: 16,
@@ -280,40 +301,35 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
       });
 
       mapRef.current = map;
-      setStatus("ready");
 
-      // Load heat map data
-      fetch(`${API}/api/heatmap?lat=${userLat}&lng=${userLng}`)
-        .then(r => r.ok ? r.json() : [])
-        .then(streets => {
+      // When map is ready AND heatmap data is ready — draw both at once
+      google.maps.event.addListenerOnce(map, "tilesloaded", () => {
+        setStatus("ready");
+        heatmapPromise.then(streets => {
           if (!alive || !mapRef.current) return;
           const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#444444" };
           const weightMap = { red: 6, yellow: 5, green: 4, gray: 2 };
-
           streets.forEach(s => {
             if (!s.coords?.length) return;
             const path = s.coords.map(([lat, lng]) => ({ lat, lng }));
             const line = new window.google.maps.Polyline({
-              path,
-              geodesic: true,
+              path, geodesic: true,
               strokeColor: colorMap[s.urgency] || colorMap.gray,
               strokeOpacity: 0.9,
               strokeWeight: weightMap[s.urgency] || 3,
               map: mapRef.current,
             });
-
             const infoWindow = new window.google.maps.InfoWindow({
               content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:4px"><b>${s.street}</b><br/>${s.nextClean || "No restrictions"}</div>`,
             });
-
             line.addListener("click", (e) => {
               infoWindow.setPosition(e.latLng);
               infoWindow.open(mapRef.current);
               if (onStreetClick) onStreetClick(s.street);
             });
           });
-        })
-        .catch(e => console.error("Heatmap fetch error:", e));
+        });
+      });
     };
 
     const loadGoogleMaps = () => {
@@ -549,7 +565,28 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .ambiguous-option-meta{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-top:2px;}
 .ambiguous-arrow{font-family:var(--mono);font-size:.8rem;color:var(--muted);}
 inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end;justify-content:center}
-.paywall-sheet{background:var(--g2);border-top:3px solid var(--yellow);padding:32px 24px 48px;width:100%;max-width:500px;animation:slideUp .3s ease}
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.auth-modal{background:var(--g2);border:1px solid var(--yellow);padding:32px 28px;width:100%;max-width:420px;animation:slideUp .25s ease}
+.auth-title{font-family:var(--display);font-size:2rem;letter-spacing:.06em;margin-bottom:4px}
+.auth-sub{font-family:var(--mono);font-size:.65rem;color:var(--muted);margin-bottom:24px;letter-spacing:.06em;line-height:1.6}
+.auth-input{width:100%;background:#111;border:1px solid #333;color:var(--white);font-family:var(--mono);font-size:.9rem;padding:12px 14px;margin-bottom:10px;outline:none;box-sizing:border-box;transition:border-color .15s}
+.auth-input:focus{border-color:var(--yellow)}
+.auth-btn{width:100%;background:var(--yellow);color:#000;border:none;font-family:var(--display);font-size:1.4rem;letter-spacing:.1em;padding:14px;cursor:pointer;margin-top:4px;transition:background .15s}
+.auth-btn:hover{background:var(--yd)}
+.auth-btn:disabled{opacity:.6;cursor:not-allowed}
+.auth-switch{font-family:var(--mono);font-size:.62rem;color:var(--muted);margin-top:14px;text-align:center}
+.auth-switch span{color:var(--yellow);cursor:pointer;text-decoration:underline}
+.auth-err{font-family:var(--mono);font-size:.62rem;color:var(--red);margin-bottom:10px}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:14px 0}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:#2a2a2a}
+.auth-divider span{font-family:var(--mono);font-size:.58rem;color:var(--muted)}
+.user-pill{background:#1a1a1a;border:1px solid #2a2a2a;color:var(--white);font-family:var(--mono);font-size:.6rem;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.user-pill:hover{border-color:#444}
+.tier-badge{font-size:.5rem;padding:1px 5px;border-radius:2px;font-weight:700;letter-spacing:.05em}
+.tier-free{background:#2a2a2a;color:#777}
+.tier-basic{background:#1a3a1a;color:#38A169}
+.tier-premium{background:#1a1a3a;color:#aaaaff}
+.tier-unlimited{background:#3a1a3a;color:#cc88ff}
 .paywall-icon{font-size:2.5rem;margin-bottom:12px}
 .paywall-title{font-family:var(--display);font-size:2.2rem;letter-spacing:.04em;margin-bottom:8px}
 .paywall-sub{font-family:var(--mono);font-size:.72rem;color:var(--muted);line-height:1.7;margin-bottom:20px}
@@ -690,14 +727,23 @@ export default function App() {
   const [signupErr,      setSignupErr]      = useState(null);
   const [checkoutBusy,   setCheckoutBusy]   = useState(null);
   const [showPaywall,    setShowPaywall]    = useState(false);
-  const [searchCount,    setSearchCount]    = useState(() => Storage.getCount());
-  const [isSubscribed]                      = useState(() => Storage.isSubscribed());
+  const [searchCount,    setSearchCount]    = useState(() => Auth.getCount());
+  const [isSubscribed]                      = useState(() => Auth.isPaid());
   const [savedSearches,  setSavedSearches]  = useState(() => Storage.getSaved());
   const [showHistory,    setShowHistory]    = useState(false);
   const [homeMapCoords,  setHomeMapCoords]  = useState(null);
   const [searchFocused,  setSearchFocused]  = useState(false);
   const [locationAllowed, setLocationAllowed] = useState(null);
-  const [scrolled,       setScrolled]       = useState(false); // null=unknown, true, false
+  const [scrolled,       setScrolled]       = useState(false);
+  // Auth state
+  const [user,           setUser]           = useState(() => Auth.getUser());
+  const [showAuthModal,  setShowAuthModal]  = useState(false);
+  const [authMode,       setAuthMode]       = useState("signup"); // "signup" | "login"
+  const [authEmail,      setAuthEmail]      = useState("");
+  const [authPassword,   setAuthPassword]   = useState("");
+  const [authName,       setAuthName]       = useState("");
+  const [authErr,        setAuthErr]        = useState(null);
+  const [authBusy,       setAuthBusy]       = useState(false);
 
   // All useCallback hooks next — defined in dependency order
   const resetHome = useCallback(() => {
@@ -706,13 +752,39 @@ export default function App() {
   }, []);
 
   const canSearch = useCallback(() => {
-    if (Storage.isSubscribed()) return true;
-    if (Storage.getCount() >= 2) { setShowPaywall(true); return false; }
-    return true;
+    const count = Auth.getCount();
+    if (Auth.isPaid()) return true;
+    if (Auth.isLoggedIn() && count < 8) return true;
+    if (!Auth.isLoggedIn() && count < 1) return true;
+    if (!Auth.isLoggedIn()) { setShowAuthModal(true); return false; }
+    setShowPaywall(true); return false;
+  }, []);
+
+  const handleAuthSubmit = useCallback(async () => {
+    setAuthBusy(true); setAuthErr(null);
+    try {
+      const endpoint = authMode === "signup" ? "/auth/signup" : "/auth/login";
+      const body = authMode === "signup"
+        ? { email: authEmail, password: authPassword, name: authName }
+        : { email: authEmail, password: authPassword };
+      const r = await fetch(`${API}${endpoint}`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Something went wrong");
+      Auth.setToken(d.token);
+      Auth.setUser(d.user);
+      setUser(d.user);
+      setShowAuthModal(false);
+      setAuthEmail(""); setAuthPassword(""); setAuthName("");
+    } catch(e) { setAuthErr(e.message); }
+    finally { setAuthBusy(false); }
+  }, [authMode, authEmail, authPassword, authName]);
+
+  const handleLogout = useCallback(() => {
+    Auth.clear(); setUser(null); setSearchCount(0);
   }, []);
 
   const tickSearch = useCallback(() => {
-    setSearchCount(Storage.incCount());
+    setSearchCount(Auth.incCount());
   }, []);
 
   const loadCleaningForStreets = useCallback(async (streets, lat, lng) => {
@@ -913,14 +985,25 @@ export default function App() {
     <>
       <style>{css}</style>
 
-      {/* TOP BAR — slides in when scrolling up, hides when scrolling down */}
+      {/* TOP BAR */}
       <div style={{
         position:"sticky",top:0,zIndex:100,background:"var(--black)",
         transform: scrolled ? "translateY(-100%)" : "translateY(0)",
         transition:"transform .25s ease",
       }}>
-        <div style={{display:"flex",justifyContent:"center",padding:"10px 0 0"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px 0"}}>
+          <div style={{width:80}} />
           <button className="home-btn" onClick={resetHome}>⌂ HOME</button>
+          <div style={{width:80,display:"flex",justifyContent:"flex-end"}}>
+            {user ? (
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span className={`tier-badge tier-${user.tier}`}>{user.tier?.toUpperCase()}</span>
+                <button className="user-pill" onClick={handleLogout}>↪ OUT</button>
+              </div>
+            ) : (
+              <button className="user-pill" onClick={() => { setAuthMode("login"); setShowAuthModal(true); }}>SIGN IN</button>
+            )}
+          </div>
         </div>
         <div style={{borderBottom:"2px solid var(--yellow)",marginTop:10}} />
       </div>
@@ -1296,25 +1379,59 @@ export default function App() {
         </div>
       )}
 
+      {/* AUTH MODAL */}
+      {showAuthModal && (
+        <div className="auth-overlay" onClick={() => setShowAuthModal(false)}>
+          <div className="auth-modal" onClick={e => e.stopPropagation()}>
+            <div className="auth-title">{authMode === "signup" ? "CREATE ACCOUNT" : "WELCOME BACK"}</div>
+            <div className="auth-sub">
+              {authMode === "signup"
+                ? "Sign up for 8 free searches — no credit card needed."
+                : "Sign in to continue searching."}
+            </div>
+            {authErr && <div className="auth-err">⚠ {authErr}</div>}
+            {authMode === "signup" && (
+              <input className="auth-input" type="text" placeholder="Your name" value={authName} onChange={e => setAuthName(e.target.value)} />
+            )}
+            <input className="auth-input" type="email" placeholder="Email address" value={authEmail} onChange={e => setAuthEmail(e.target.value)} />
+            <input className="auth-input" type="password" placeholder="Password" value={authPassword} onChange={e => setAuthPassword(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleAuthSubmit()} />
+            <button className="auth-btn" onClick={handleAuthSubmit} disabled={authBusy}>
+              {authBusy ? "..." : authMode === "signup" ? "CREATE FREE ACCOUNT →" : "SIGN IN →"}
+            </button>
+            <div className="auth-switch">
+              {authMode === "signup" ? <>Already have an account? <span onClick={() => { setAuthMode("login"); setAuthErr(null); }}>Sign in</span></> : <>New here? <span onClick={() => { setAuthMode("signup"); setAuthErr(null); }}>Create account</span></>}
+            </div>
+            <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#555",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowAuthModal(false)}>✕</button>
+          </div>
+        </div>
+      )}
+
       {/* PAYWALL */}
       {showPaywall && (
         <div className="paywall-overlay" onClick={() => setShowPaywall(false)}>
           <div className="paywall-sheet" onClick={e => e.stopPropagation()}>
             <div className="paywall-icon">🚗</div>
             <div className="paywall-title">UNLOCK STREET PARK NOW</div>
-            <div className="paywall-sub">You've used your 2 free searches. Subscribe to keep searching, save your history, and get SMS alerts before your car gets ticketed.</div>
-            <button className="paywall-apple" onClick={() => handleCheckout("annual")}> Subscribe with Apple</button>
-            <div className="paywall-plans">
-              {[{key:"monthly",name:"Monthly",price:"$2.99",per:"/mo"},{key:"annual",name:"Annual",price:"$19",per:"/yr",tag:"SAVE 47%"}].map(p => (
-                <div key={p.key} className={`paywall-plan ${p.tag?"best":""}`} onClick={() => handleCheckout(p.key)}>
+            <div className="paywall-sub">You've used your free searches. Choose a plan to keep going.</div>
+            <div className="paywall-plans" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:12}}>
+              {[
+                {key:"basic-monthly",  name:"Basic",     price:"$4.20", per:"/mo",  desc:"999 searches"},
+                {key:"basic-annual",   name:"Basic",     price:"$45",   per:"/yr",  desc:"999 searches", tag:"SAVE 11%"},
+                {key:"premium-monthly",name:"Premium",   price:"$5.79", per:"/mo",  desc:"Unlimited"},
+                {key:"premium-annual", name:"Premium",   price:"$58.99",per:"/yr",  desc:"Unlimited",    tag:"BEST VALUE"},
+                {key:"unlimited-monthly",name:"Unlimited+Save",price:"$6.49",per:"/mo",desc:"Unlimited + Saved"},
+                {key:"unlimited-annual", name:"Unlimited+Save",price:"$69.99",per:"/yr",desc:"Unlimited + Saved",tag:"SAVE 10%"},
+              ].map(p => (
+                <div key={p.key} className={`paywall-plan ${p.tag==="BEST VALUE"?"best":""}`} onClick={() => handleCheckout(p.key)}>
                   <div className="pp-name">{p.name}</div>
-                  <div className="pp-price">{p.price}</div>
+                  <div className="pp-price" style={{fontSize:"1.3rem"}}>{p.price}</div>
                   <div className="pp-per">{p.per}</div>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".5rem",color:"#666",marginTop:3}}>{p.desc}</div>
                   {p.tag && <div className="pp-tag">{p.tag}</div>}
                 </div>
               ))}
             </div>
-            <button className="paywall-cta" onClick={() => handleCheckout("annual")}>START 30-DAY FREE TRIAL →</button>
             <button className="paywall-dismiss" onClick={() => setShowPaywall(false)}>Maybe later</button>
           </div>
         </div>
