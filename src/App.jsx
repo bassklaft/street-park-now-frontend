@@ -16,10 +16,17 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
         initAutocomplete();
         return;
       }
-      if (document.querySelector('script[src*="maps.googleapis"]')) return;
+      if (document.querySelector('script[src*="maps.googleapis"]')) {
+        // Wait for existing script to load
+        const wait = setInterval(() => {
+          if (window.google?.maps?.places) { clearInterval(wait); initAutocomplete(); }
+        }, 100);
+        return;
+      }
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places&loading=async`;
       script.async = true;
+      script.defer = true;
       script.onload = initAutocomplete;
       document.head.appendChild(script);
     };
@@ -312,15 +319,15 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
     const loadGoogleMaps = () => {
       if (window.google?.maps) { initMap(); return; }
       if (document.querySelector('script[src*="maps.googleapis"]')) {
-        // Script already loading — wait for it
         const wait = setInterval(() => {
           if (window.google?.maps) { clearInterval(wait); initMap(); }
         }, 100);
         return;
       }
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places&loading=async`;
       script.async = true;
+      script.defer = true;
       script.onload = () => { if (alive) initMap(); };
       script.onerror = () => setStatus("error");
       document.head.appendChild(script);
