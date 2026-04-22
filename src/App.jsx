@@ -1004,16 +1004,17 @@ export default function App() {
         transition:"transform .25s ease",
       }}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px 0"}}>
-          <div style={{width:80}} />
+          <div style={{width:110,display:"flex",justifyContent:"flex-start"}}>
+            {user && (
+              <span className={`tier-badge tier-${user.tier}`} style={{fontSize:".65rem",padding:"3px 8px",whiteSpace:"nowrap"}}>
+                Tier: {user.tier === "unlimited" ? "UNLIMITED+SAVE" : user.tier === "premium" ? "PREMIUM" : user.tier === "basic" ? "BASIC" : "FREE"}
+              </span>
+            )}
+          </div>
           <button className="home-btn" onClick={resetHome}>⌂ HOME</button>
-          <div style={{width:80,display:"flex",justifyContent:"flex-end"}}>
+          <div style={{width:110,display:"flex",justifyContent:"flex-end"}}>
             {user ? (
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <span className={`tier-badge tier-${user.tier}`} style={{fontSize:".65rem",padding:"2px 8px"}}>
-                  {user.tier === "unlimited" ? "UNLIMITED+SAVE" : user.tier === "premium" ? "PREMIUM" : user.tier === "basic" ? "BASIC" : "FREE"}
-                </span>
-                <button className="user-pill" onClick={handleLogout}>SIGN OUT</button>
-              </div>
+              <button className="user-pill" onClick={handleLogout} style={{whiteSpace:"nowrap"}}>SIGN OUT</button>
             ) : (
               <button className="user-pill" onClick={() => { setAuthMode("login"); setShowAuthModal(true); }}>SIGN IN</button>
             )}
@@ -1033,12 +1034,12 @@ export default function App() {
             <div className="search-section">
               {searchCount > 0 && (
                 <div className="gate-note" style={{color: Auth.isPaid() ? "var(--yellow)" : remaining === 0 ? "var(--red)" : "var(--yellow)"}}>
-                  {Auth.getTier() === "unlimited" ? "✓ Unlimited searches + Save feature" :
-                   Auth.getTier() === "premium"   ? "✓ Unlimited searches" :
-                   Auth.getTier() === "basic"     ? `✓ ${Math.max(0, 999 - searchCount)} searches remaining` :
+                  {Auth.getTier() === "unlimited" ? "✓ Unlimited Searches + Save Feature" :
+                   Auth.getTier() === "premium"   ? "✓ Unlimited Searches" :
+                   Auth.getTier() === "basic"     ? `✓ ${Math.max(0, 999 - searchCount)} Searches Remaining` :
                    remaining === 0
-                     ? Auth.isLoggedIn() ? "⚠ Free searches used — subscribe to continue" : "⚠ Sign up free to get 8 searches"
-                     : `${remaining} free search${remaining === 1 ? "" : "es"} remaining`}
+                     ? Auth.isLoggedIn() ? "⚠ Free Searches Used — Subscribe To Continue" : "⚠ Sign Up Free To Get 8 Searches"
+                     : `${remaining} Free Search${remaining === 1 ? "" : "es"} Remaining`}
                 </div>
               )}
               <div style={{position:"relative"}}>
