@@ -461,7 +461,7 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .chip.on{background:var(--yellow);color:var(--black);border-color:var(--yellow)}
 .clean-time{font-family:var(--display);font-size:1.45rem;letter-spacing:.04em}
 .clean-raw{font-family:var(--mono);font-size:.58rem;color:#444;margin-top:3px;line-height:1.4}
-.side-tag{display:inline-block;font-family:var(--mono);font-size:.56rem;padding:2px 7px;border:1px solid #2a2a2a;color:var(--muted);margin-bottom:6px}
+.side-tag{display:inline-block;font-family:var(--mono);font-size:.56rem;padding:2px 7px;border:1px solid #2a2a2a;color:var(--yellow);margin-bottom:6px}
 .street-lbl{font-family:var(--mono);font-size:.62rem;color:var(--yellow);letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase}
 .ev-card{background:var(--g2);border:1px solid #222;border-left:3px solid var(--blue);padding:13px 16px;margin-bottom:8px}
 .ev-card.film{border-left-color:var(--orange)}.ev-card.severe{border-left-color:var(--red);background:#12100a}
@@ -586,57 +586,76 @@ const CITY_STATS = [
 function DraggableCarousel() {
   const trackRef = useRef(null);
   const posRef = useRef(0);
+  const halfWidthRef = useRef(0);
   const dragRef = useRef({ active: false, startX: 0, startPos: 0 });
   const animRef = useRef(null);
   const pausedRef = useRef(false);
-  const SPEED = 0.4; // px per frame — slower = nicer
+  const SPEED = 0.4;
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    const halfWidth = track.scrollWidth / 2;
+
+    // Wait for layout then measure half width
+    const measure = () => { halfWidthRef.current = track.scrollWidth / 2; };
+    measure();
+    window.addEventListener("resize", measure);
 
     const animate = () => {
       if (!pausedRef.current) {
         posRef.current -= SPEED;
-        if (Math.abs(posRef.current) >= halfWidth) posRef.current = 0;
+        // Seamless loop — when we've scrolled one full copy, reset silently
+        if (halfWidthRef.current > 0 && Math.abs(posRef.current) >= halfWidthRef.current) {
+          posRef.current += halfWidthRef.current;
+        }
         track.style.transform = `translateX(${posRef.current}px)`;
       }
       animRef.current = requestAnimationFrame(animate);
     };
     animRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animRef.current);
+
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener("resize", measure);
+    };
   }, []);
 
-  const onMouseDown = (e) => {
+  const startDrag = (x) => {
     pausedRef.current = true;
-    dragRef.current = { active: true, startX: e.clientX, startPos: posRef.current };
+    dragRef.current = { active: true, startX: x, startPos: posRef.current };
     trackRef.current?.classList.add("dragging");
   };
-  const onMouseMove = (e) => {
-    if (!dragRef.current.active) return;
-    const dx = e.clientX - dragRef.current.startX;
-    posRef.current = dragRef.current.startPos + dx;
-    if (trackRef.current) trackRef.current.style.transform = `translateX(${posRef.current}px)`;
-  };
-  const onMouseUp = () => { dragRef.current.active = false; pausedRef.current = false; trackRef.current?.classList.remove("dragging"); };
 
-  const onTouchStart = (e) => {
-    pausedRef.current = true;
-    dragRef.current = { active: true, startX: e.touches[0].clientX, startPos: posRef.current };
-  };
-  const onTouchMove = (e) => {
+  const moveDrag = (x) => {
     if (!dragRef.current.active) return;
-    const dx = e.touches[0].clientX - dragRef.current.startX;
-    posRef.current = dragRef.current.startPos + dx;
+    const dx = x - dragRef.current.startX;
+    let newPos = dragRef.current.startPos + dx;
+    // Keep within bounds for seamless loop
+    if (halfWidthRef.current > 0) {
+      while (newPos > 0) newPos -= halfWidthRef.current;
+      while (newPos < -halfWidthRef.current) newPos += halfWidthRef.current;
+    }
+    posRef.current = newPos;
     if (trackRef.current) trackRef.current.style.transform = `translateX(${posRef.current}px)`;
   };
-  const onTouchEnd = () => { dragRef.current.active = false; pausedRef.current = false; };
+
+  const endDrag = () => {
+    dragRef.current.active = false;
+    trackRef.current?.classList.remove("dragging");
+    // Resume from current position — no jump
+    pausedRef.current = false;
+  };
 
   return (
-    <div style={{overflow:"hidden",width:"100%"}}
-      onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+    <div
+      style={{overflow:"hidden",width:"100%",cursor:"grab"}}
+      onMouseDown={e => startDrag(e.clientX)}
+      onMouseMove={e => moveDrag(e.clientX)}
+      onMouseUp={endDrag}
+      onMouseLeave={endDrag}
+      onTouchStart={e => startDrag(e.touches[0].clientX)}
+      onTouchMove={e => { e.preventDefault(); moveDrag(e.touches[0].clientX); }}
+      onTouchEnd={endDrag}
     >
       <div ref={trackRef} className="carousel-track">
         {[...CITY_STATS, ...CITY_STATS].map((s, i) => (
@@ -677,7 +696,8 @@ export default function App() {
   const [showHistory,    setShowHistory]    = useState(false);
   const [homeMapCoords,  setHomeMapCoords]  = useState(null);
   const [searchFocused,  setSearchFocused]  = useState(false);
-  const [locationAllowed, setLocationAllowed] = useState(null); // null=unknown, true, false
+  const [locationAllowed, setLocationAllowed] = useState(null);
+  const [scrolled,       setScrolled]       = useState(false); // null=unknown, true, false
 
   // All useCallback hooks next — defined in dependency order
   const resetHome = useCallback(() => {
@@ -826,34 +846,56 @@ export default function App() {
     } catch(e) { setSignupErr(e.message); } finally { setSignupBusy(false); }
   }, [phone, locData, coords]);
 
+  // Show top bar when scrolling up, hide when scrolling down
+  useEffect(() => {
+    let lastY = 0;
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > lastY && y > 60);
+      lastY = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   // useEffect last — after all useCallback
   useEffect(() => {
     if (window.__AUTO_GPS__) { window.__AUTO_GPS__ = false; setTimeout(handleGPS, 500); }
   }, [handleGPS]);
 
-  // Check location permission on load — show map immediately if allowed
+  // Check location permission on load — if already granted, auto-search nearby streets
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.permissions?.query({ name: "geolocation" }).then(perm => {
-        if (perm.state === "granted") {
-          setLocationAllowed(true);
-          navigator.geolocation.getCurrentPosition(
-            ({ coords: { latitude, longitude } }) => setHomeMapCoords({ lat: latitude, lng: longitude }),
-            () => setHomeMapCoords({ lat: 40.7580, lng: -73.9855 })
-          );
-        } else if (perm.state === "denied") {
-          setLocationAllowed(false);
-          setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
-        }
-        // if "prompt", wait until user clicks search bar
-      }).catch(() => {
-        // Permissions API not supported — just try silently
+    if (!navigator.geolocation) return;
+    navigator.permissions?.query({ name: "geolocation" }).then(perm => {
+      if (perm.state === "granted") {
+        setLocationAllowed(true);
         navigator.geolocation.getCurrentPosition(
-          ({ coords: { latitude, longitude } }) => { setLocationAllowed(true); setHomeMapCoords({ lat: latitude, lng: longitude }); },
-          () => { setLocationAllowed(false); setHomeMapCoords({ lat: 40.7580, lng: -73.9855 }); }
+          ({ coords: { latitude: lat, longitude: lng } }) => {
+            setHomeMapCoords({ lat, lng });
+            // Auto-trigger full search so streets appear below map
+            if (canSearch()) {
+              tickSearch();
+              setPhase("loading");
+              reverseGeocode(lat, lng)
+                .then(loc => loadAll({ ...loc, lat, lng }))
+                .catch(() => setPhase("home"));
+            }
+          },
+          () => setHomeMapCoords({ lat: 40.7580, lng: -73.9855 })
         );
-      });
-    }
+      } else if (perm.state === "denied") {
+        setLocationAllowed(false);
+        setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+      }
+    }).catch(() => {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords: { latitude: lat, longitude: lng } }) => {
+          setLocationAllowed(true);
+          setHomeMapCoords({ lat, lng });
+        },
+        () => { setLocationAllowed(false); setHomeMapCoords({ lat: 40.7580, lng: -73.9855 }); }
+      );
+    });
   }, []);
 
   // Derived values (not hooks)
@@ -871,17 +913,16 @@ export default function App() {
     <>
       <style>{css}</style>
 
-      {/* NAV */}
-      <nav className="nav">
-        <div className="logo" onClick={resetHome} style={{cursor:"pointer"}}><span>MOVE</span> MY CAR</div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <span className="pill">NYC+</span>
-          {phase === "dash" && <button className="pill ghost" onClick={resetHome}>↺ CHANGE</button>}
+      {/* TOP BAR — slides in when scrolling up, hides when scrolling down */}
+      <div style={{
+        position:"sticky",top:0,zIndex:100,background:"var(--black)",
+        transform: scrolled ? "translateY(-100%)" : "translateY(0)",
+        transition:"transform .25s ease",
+      }}>
+        <div style={{display:"flex",justifyContent:"center",padding:"10px 0 0"}}>
+          <button className="home-btn" onClick={resetHome}>⌂ HOME</button>
         </div>
-      </nav>
-      {/* HOME BUTTON — centered below nav bar */}
-      <div style={{display:"flex",justifyContent:"center",padding:"8px 0",borderBottom:"1px solid #1a1a1a"}}>
-        <button className="home-btn" onClick={resetHome}>⌂ HOME</button>
+        <div style={{borderBottom:"2px solid var(--yellow)",marginTop:10}} />
       </div>
 
       {/* HOME */}
