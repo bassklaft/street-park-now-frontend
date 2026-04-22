@@ -1271,27 +1271,39 @@ export default function App() {
               </div>
 
               {/* Cleaning */}
-              <div className="sec">
+              <div className="sec" style={{position:"relative"}}>
                 <div className="sec-hd">🧹 Street Cleaning {cleaning.length > 0 && <span className="badge">{cleaning.length}</span>}</div>
                 {isMulti && <div className="sec-note">Showing {locData.isPark ? "all bordering streets" : locData.isNeighborhood ? "all streets in this neighborhood" : locData.isGPS ? "nearby streets · closest first" : "streets in this zip"}</div>}
                 {cleaning.length === 0 ? <div className="empty">No street cleaning regulations found for this block.</div>
-                  : cleaning.map((c, i) => (
-                    <div key={i} className={`clean-card ${c.days?.includes(today) ? "today" : ""}`}>
-                      {c.days?.includes(today) && <span className="today-tag">⚠ CLEANING TODAY</span>}
-                      {isMulti && c.street && <div className="street-lbl">{c.street}</div>}
-                      {c.side && <div className="side-tag">{c.side === "L" ? "Left / Even" : c.side === "R" ? "Right / Odd" : c.side}</div>}
-                      <div className="chips">{DAYS.map(d => <span key={d} className={`chip ${c.days?.includes(d) ? "on" : ""}`}>{d}</span>)}</div>
-                      {c.time && <div className="clean-time">{c.time}</div>}
-                      {c.upcomingDates?.length > 0 && (
-                        <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:5}}>
-                          {c.upcomingDates.map((d, di) => (
-                            <span key={di} style={{fontFamily:"var(--mono)",fontSize:".56rem",padding:"2px 7px",background:di===0&&c.days?.includes(today)?"var(--red)":"var(--g1)",color:di===0&&c.days?.includes(today)?"var(--white)":"var(--muted)",border:"1px solid #2a2a2a",letterSpacing:".03em"}}>{d}</span>
-                          ))}
+                  : cleaning.map((c, i) => {
+                    const isBlurred = !Auth.isLoggedIn() && i >= 2;
+                    return (
+                      <div key={i} style={{position:"relative"}}>
+                        <div className={`clean-card ${c.days?.includes(today) ? "today" : ""}`} style={isBlurred ? {filter:"blur(4px)",userSelect:"none",pointerEvents:"none"} : {}}>
+                          {c.days?.includes(today) && <span className="today-tag">⚠ CLEANING TODAY</span>}
+                          {isMulti && c.street && <div className="street-lbl">{c.street}</div>}
+                          {c.side && <div className="side-tag">{c.side === "L" ? "Left / Even" : c.side === "R" ? "Right / Odd" : c.side}</div>}
+                          <div className="chips">{DAYS.map(d => <span key={d} className={`chip ${c.days?.includes(d) ? "on" : ""}`}>{d}</span>)}</div>
+                          {c.time && <div className="clean-time">{c.time}</div>}
+                          {c.upcomingDates?.length > 0 && (
+                            <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:5}}>
+                              {c.upcomingDates.map((d, di) => (
+                                <span key={di} style={{fontFamily:"var(--mono)",fontSize:".56rem",padding:"2px 7px",background:di===0&&c.days?.includes(today)?"var(--red)":"var(--g1)",color:di===0&&c.days?.includes(today)?"var(--white)":"var(--muted)",border:"1px solid #2a2a2a",letterSpacing:".03em"}}>{d}</span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="clean-raw">{c.raw}</div>
                         </div>
-                      )}
-                      <div className="clean-raw">{c.raw}</div>
-                    </div>
-                  ))}
+                        {isBlurred && i === 2 && (
+                          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(8,8,8,0.7)",cursor:"pointer"}} onClick={() => setShowAuthModal(true)}>
+                            <div style={{fontFamily:"var(--display)",fontSize:"1.1rem",color:"var(--yellow)",letterSpacing:".06em",textAlign:"center"}}>CREATE A FREE ACCOUNT</div>
+                            <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--white)",letterSpacing:".08em",textAlign:"center"}}>TO UNLOCK ALL RESULTS</div>
+                            <div style={{background:"var(--yellow)",color:"#000",fontFamily:"var(--display)",fontSize:"1rem",padding:"6px 20px",letterSpacing:".08em",marginTop:4}}>SIGN UP FREE →</div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
 
               {/* Film permits */}
