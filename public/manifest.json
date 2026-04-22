@@ -1,6 +1,6 @@
 {
-  "name": "Move My Car",
-  "short_name": "Move My Car",
+  "name": "Street Park Now",
+  "short_name": "Street Park Now",
   "description": "Street parking info for your city",
   "start_url": "/",
   "display": "standalone",

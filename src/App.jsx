@@ -931,7 +931,7 @@ export default function App() {
 
           {/* HERO */}
           <div className="hero-section">
-            <h1 className="h1">MOVE MY <em>CAR.</em></h1>
+            <h1 className="h1">STREET PARK <em>NOW.</em></h1>
             <p className="app-tagline">Street Parking Info For Your City</p>
             <div className="search-section">
               {!isSubscribed && searchCount > 0 && (
@@ -1301,7 +1301,7 @@ export default function App() {
         <div className="paywall-overlay" onClick={() => setShowPaywall(false)}>
           <div className="paywall-sheet" onClick={e => e.stopPropagation()}>
             <div className="paywall-icon">🚗</div>
-            <div className="paywall-title">UNLOCK MOVE MY CAR</div>
+            <div className="paywall-title">UNLOCK STREET PARK NOW</div>
             <div className="paywall-sub">You've used your 2 free searches. Subscribe to keep searching, save your history, and get SMS alerts before your car gets ticketed.</div>
             <button className="paywall-apple" onClick={() => handleCheckout("annual")}> Subscribe with Apple</button>
             <div className="paywall-plans">
