@@ -201,9 +201,9 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
 
     const initMap = () => {
       if (!alive || !ref.current || !window.google?.maps) return;
-      const cLat = userLat ? (destLat + userLat) / 2 : destLat;
-      const cLng = userLng ? (destLng + userLng) / 2 : destLng;
-
+      const cLat = destLat || userLat;
+      const cLng = destLng || userLng;
+      if (!cLat || !cLng) return;
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: cLat, lng: cLng },
         zoom: userLat ? 15 : 16,
@@ -229,7 +229,7 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
         new window.google.maps.Marker({
           position: { lat: destLat, lng: destLng },
           map,
-          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:"#E53E3E", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:"#3182CE", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
           title: label,
         });
       }
@@ -1186,7 +1186,7 @@ export default function App() {
 
       {/* LOADING */}
       {phase === "loading" && (
-        <div className="loading"><div className="spin" /><div className="loading-lbl">Scanning NYC databases…</div></div>
+        <div className="loading"><div className="spin" /><div className="loading-lbl" style={{textAlign:"center"}}>SEARCHING YOUR CITY'S DATABASE…</div></div>
       )}
 
       {/* FAQ PAGE */}
@@ -1359,8 +1359,7 @@ export default function App() {
                 history={histPins}
               />
               <div className="map-legend">
-                <div className="map-legend-item"><div className="map-dot" style={{background:"var(--red)"}} /><span>Destination</span></div>
-                {coords?.lat && coords.lat !== locData.lat && <div className="map-legend-item"><div className="map-dot" style={{background:"var(--blue)"}} /><span>You</span></div>}
+                {coords?.lat && <div className="map-legend-item"><div className="map-dot" style={{background:"var(--blue)"}} /><span>You</span></div>}
                 {histPins.length > 0 && <div className="map-legend-item"><div className="map-dot" style={{background:"var(--green)"}} /><span>Previous searches</span></div>}
               </div>
             </div>
