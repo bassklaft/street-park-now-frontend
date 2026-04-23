@@ -1084,7 +1084,9 @@ export default function App() {
               </div>
             )}
           </div>
-          <button className="home-btn" onClick={resetHome}>⌂ HOME</button>
+          <button className="home-btn" onClick={resetHome}>
+            H<svg viewBox="0 0 14 16" style={{width:"0.75em",height:"0.85em",verticalAlign:"-0.1em",display:"inline-block"}} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"><polyline points="1,8 7,1 13,8"/><polyline points="3,6.5 3,15 11,15 11,6.5"/></svg>ME
+          </button>
           <div style={{width:110,display:"flex",justifyContent:"flex-end"}}>
             {user && (
               <span className={`tier-badge tier-${user.tier}`} style={{fontSize:".65rem",padding:"3px 8px",whiteSpace:"nowrap"}}>
