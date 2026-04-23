@@ -1135,35 +1135,41 @@ export default function App() {
     if (window.__AUTO_GPS__) { window.__AUTO_GPS__ = false; setTimeout(handleGPS, 500); }
   }, [handleGPS]);
 
-  // Check location permission on load — set coords for heatmap, don't auto-navigate away
+  // Check location permission on load — auto-search for paid users
   useEffect(() => {
-    if (!navigator.geolocation) {
-      
-      return;
-    }
+    if (!navigator.geolocation) return;
     navigator.permissions?.query({ name: "geolocation" }).then(perm => {
       if (perm.state === "granted") {
         setLocationAllowed(true);
         navigator.geolocation.getCurrentPosition(
           ({ coords: { latitude: lat, longitude: lng } }) => {
             setHomeMapCoords({ lat, lng });
+            // Auto-search for paid users on reload
+            if (Auth.isPaid()) {
+              setCoords({ lat, lng });
+              reverseGeocode(lat, lng)
+                .then(loc => loadAll({ ...loc, lat, lng }))
+                .catch(() => {});
+            }
           },
-          () => {} // don't default to Midtown if geolocation fails
+          () => {}
         );
       } else if (perm.state === "denied") {
         setLocationAllowed(false);
-        
-      } else {
-        // Not yet determined — show NYC by default
-        
       }
     }).catch(() => {
       navigator.geolocation.getCurrentPosition(
         ({ coords: { latitude: lat, longitude: lng } }) => {
           setLocationAllowed(true);
           setHomeMapCoords({ lat, lng });
+          if (Auth.isPaid()) {
+            setCoords({ lat, lng });
+            reverseGeocode(lat, lng)
+              .then(loc => loadAll({ ...loc, lat, lng }))
+              .catch(() => {});
+          }
         },
-        () => { setLocationAllowed(false);  }
+        () => { setLocationAllowed(false); }
       );
     });
   }, []);
