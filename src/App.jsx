@@ -403,138 +403,103 @@ function CoverageMap({ onCityClick }) {
 }
 
 // ─── HEAT MAP ────────────────────────────────────────────────────────────────
-function HeatMap({ userLat, userLng, onStreetClick }) {
-  const ref = useRef(null);
-  const mapRef = useRef(null);
-  const streetsRef = useRef([]);
-  const [status, setStatus] = useState("loading");
-  const [streets, setStreets] = useState([]);
-  const [mapReady, setMapReady] = useState(false);
+// Module-level storage — survives React re-renders
+const _heatmap = { map: null, data: [], drawn: false };
 
-  const drawPolylines = (map, data) => {
-    if (!map || !data.length || !window.google?.maps) return;
-    const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
-    const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
-    let count = 0;
-    data.forEach(s => {
-      if (!s.coords || s.coords.length < 2) return;
-      const path = s.coords.map(c => Array.isArray(c) ? { lat: c[0], lng: c[1] } : c);
-      new window.google.maps.Polyline({
-        path, geodesic: true,
-        strokeColor: colorMap[s.urgency] || colorMap.gray,
-        strokeOpacity: s.urgency === "gray" ? 0.7 : 0.9,
-        strokeWeight: weightMap[s.urgency] || 3,
-        map,
-      });
-      count++;
+function drawHeatmapStreets() {
+  if (!_heatmap.map || !_heatmap.data.length || _heatmap.drawn) return;
+  if (!window.google?.maps) return;
+  _heatmap.drawn = true;
+  const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#666666" };
+  const weights = { red:6, yellow:5, green:4, gray:3 };
+  let n = 0;
+  _heatmap.data.forEach(s => {
+    if (!s.coords || s.coords.length < 2) return;
+    const path = s.coords.map(c => Array.isArray(c) ? {lat:c[0],lng:c[1]} : c);
+    new window.google.maps.Polyline({
+      path, map: _heatmap.map, geodesic: true,
+      strokeColor: colors[s.urgency] || colors.gray,
+      strokeOpacity: s.urgency === "gray" ? 0.6 : 0.9,
+      strokeWeight: weights[s.urgency] || 3,
     });
-    console.log(`Drew ${count} polylines`);
-  };
+    n++;
+  });
+  console.log("Heatmap drew", n, "polylines");
+}
 
-  // Fetch heatmap data
+function HeatMap({ userLat, userLng, onStreetClick }) {
+  const divRef = useRef(null);
+
   useEffect(() => {
-    if (!userLat || !userLng) return;
-    setStatus("loading");
+    if (!userLat || !userLng || !divRef.current) return;
+
+    // Reset module state for new location
+    _heatmap.map = null;
+    _heatmap.data = [];
+    _heatmap.drawn = false;
+
+    // Start fetching data immediately
     fetch(`${API}/api/heatmap?lat=${userLat}&lng=${userLng}`)
       .then(r => r.ok ? r.json() : [])
       .then(data => {
-        streetsRef.current = data;
-        setStreets(data);
-        setStatus("ready");
-        // Draw immediately if map already ready
-        if (mapRef.current) drawPolylines(mapRef.current, data);
+        console.log("Heatmap data arrived:", data.length, "streets");
+        _heatmap.data = data;
+        drawHeatmapStreets(); // draw if map already ready
       })
-      .catch(() => setStatus("ready"));
-  }, [userLat, userLng]);
+      .catch(e => console.error("Heatmap fetch error:", e));
 
-  // Init map
-  useEffect(() => {
-    if (!userLat || !userLng || !ref.current) return;
-    let alive = true;
-
+    // Init map
     const initMap = () => {
-      if (!alive || !ref.current || !window.google?.maps) return;
-
-      const map = new window.google.maps.Map(ref.current, {
+      if (!divRef.current || !window.google?.maps) return;
+      const map = new window.google.maps.Map(divRef.current, {
         center: { lat: userLat, lng: userLng },
-        zoom: 14,
+        zoom: 15,
         mapTypeId: "roadmap",
-        disableDefaultUI: false,
         zoomControl: true,
         streetViewControl: false,
         mapTypeControl: false,
         fullscreenControl: false,
         styles: [
-          { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#242424" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#888888" }] },
-          { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c2c2c" }] },
-          { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212121" }] },
-          { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3c3c3c" }] },
-          { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-          { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
-          { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#3d3d3d" }] },
-          { featureType: "poi", stylers: [{ visibility: "off" }] },
-          { featureType: "transit", stylers: [{ visibility: "off" }] },
+          { elementType:"geometry", stylers:[{color:"#1a1a1a"}] },
+          { elementType:"labels.text.stroke", stylers:[{color:"#242424"}] },
+          { elementType:"labels.text.fill", stylers:[{color:"#888888"}] },
+          { featureType:"road", elementType:"geometry", stylers:[{color:"#2c2c2c"}] },
+          { featureType:"road.highway", elementType:"geometry", stylers:[{color:"#3c3c3c"}] },
+          { featureType:"water", elementType:"geometry", stylers:[{color:"#000000"}] },
+          { featureType:"poi", stylers:[{visibility:"off"}] },
+          { featureType:"transit", stylers:[{visibility:"off"}] },
         ],
       });
 
       new window.google.maps.Marker({
-        position: { lat: userLat, lng: userLng },
-        map,
-        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor:"#3182CE", fillOpacity:1, strokeColor:"#ffffff", strokeWeight:2 },
-        title: "You are here",
+        position: { lat: userLat, lng: userLng }, map,
+        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale:8, fillColor:"#3182CE", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
       });
 
-      mapRef.current = map;
+      _heatmap.map = map;
+      drawHeatmapStreets(); // draw if data already arrived
 
-      // Draw streets if data already arrived
-      if (streetsRef.current.length > 0) {
-        drawPolylines(map, streetsRef.current);
-      }
-
-      // Also draw on idle in case data arrives after map
-      google.maps.event.addListenerOnce(map, "idle", () => {
-        if (alive) {
-          setMapReady(true);
-          if (streetsRef.current.length > 0) drawPolylines(map, streetsRef.current);
-        }
-      });
+      // Also try on idle
+      window.google.maps.event.addListenerOnce(map, "idle", drawHeatmapStreets);
+      // And after 8 seconds as final fallback
+      setTimeout(drawHeatmapStreets, 8000);
     };
 
-    const loadGoogleMaps = () => {
-      if (window.google?.maps) { initMap(); return; }
-      if (document.querySelector('script[src*="maps.googleapis"]')) {
-        const wait = setInterval(() => { if (window.google?.maps) { clearInterval(wait); initMap(); } }, 100);
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places&loading=async`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => { if (alive) initMap(); };
-      script.onerror = () => setStatus("error");
-      document.head.appendChild(script);
-    };
-
-    const timer = setTimeout(loadGoogleMaps, 100);
-    return () => { alive = false; clearTimeout(timer); };
+    if (window.google?.maps) {
+      initMap();
+    } else if (document.querySelector('script[src*="maps.googleapis"]')) {
+      const wait = setInterval(() => { if (window.google?.maps) { clearInterval(wait); initMap(); } }, 200);
+    } else {
+      const s = document.createElement("script");
+      s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places&loading=async`;
+      s.onload = initMap;
+      document.head.appendChild(s);
+    }
   }, [userLat, userLng]);
 
   return (
     <div style={{position:"relative",marginBottom:16}}>
-      <div ref={ref} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111",display:"block"}} />
-      {status === "loading" && (
-        <div style={{position:"absolute",inset:0,background:"rgba(8,8,8,.85)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:8,pointerEvents:"none"}}>
-          <div style={{width:24,height:24,border:"2px solid #333",borderTopColor:"var(--yellow)",borderRadius:"50%",animation:"spin .8s linear infinite"}} />
-          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".1em"}}>LOADING MAP…</span>
-        </div>
-      )}
-      {status === "error" && (
-        <div style={{position:"absolute",inset:0,background:"#111",display:"flex",alignItems:"center",justifyContent:"center"}}>
-          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)"}}>Map unavailable</span>
-        </div>
-      )}
+      <div ref={divRef} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111",display:"block"}} />
       <div style={{display:"flex",gap:16,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",flexWrap:"wrap"}}>
         {[["#E53E3E","Move Today/Tomorrow"],["#F7C948","Move In 2-3 Days"],["#38A169","Safe 4+ Days"],["#444","No Data"]].map(([c,l]) => (
           <div key={l} style={{display:"flex",alignItems:"center",gap:6}}>
