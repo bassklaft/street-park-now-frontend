@@ -922,6 +922,7 @@ export default function App() {
 
   // All useCallback hooks next — defined in dependency order
   const resetHome = useCallback(() => {
+    localStorage.removeItem("spn_last_phase");
     setPhase("home"); setLocData(null); setSignedUp(false);
     setQuery(""); setSelectedEstab(null); setErr(null);
   }, []);
@@ -1002,6 +1003,7 @@ export default function App() {
     setAsp(aR.status === "fulfilled" ? aR.value : null);
     setSearchFocused(false);
     setQuery("");
+    localStorage.setItem("spn_last_phase", "dash");
     setPhase("dash");
   }, [loadCleaningForStreets]);
 
@@ -1121,12 +1123,13 @@ export default function App() {
     if (window.__AUTO_GPS__) { window.__AUTO_GPS__ = false; setTimeout(handleGPS, 500); }
   }, [handleGPS]);
 
-  // Check location permission on load — auto-search for paid users
+  // Check location permission on load — only restore search if user was on results page
   useEffect(() => {
     if (!navigator.geolocation) return;
 
-    // For paid users, restore last search immediately
-    if (Auth.isPaid()) {
+    // Only auto-restore if user was actively on a search result page
+    const wasOnResults = localStorage.getItem("spn_last_phase") === "dash";
+    if (Auth.isPaid() && wasOnResults) {
       const lastLoc = localStorage.getItem("spn_last_loc");
       if (lastLoc) {
         try {
@@ -1271,17 +1274,9 @@ export default function App() {
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              {homeMapCoords ? "🔥🗺 LIVE PARKING HEAT MAP · TAP A STREET TO SEARCH" : "🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR"}
+              🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR
             </div>
-            {homeMapCoords ? (
-              <HeatMap
-                userLat={homeMapCoords.lat}
-                userLng={homeMapCoords.lng}
-                onStreetClick={(street) => { setQuery(street); handleSearch(); }}
-              />
-            ) : (
-              <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
-            )}
+            <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
           </div>
 
           {/* SCROLLING STATS CAROUSEL */}
@@ -1309,34 +1304,29 @@ export default function App() {
             ))}
           </div>
 
-          {/* WE'LL MOVE YOUR CAR */}
-          {/* Pricing — only show if not already paid */}
-          {!Auth.isPaid() && (
-            <>
-              <div className="prices" style={{padding:"0 24px",maxWidth:560}}>
-                {[
-                  {key:"monthly",name:"Monthly",price:"$2.99",per:"/month",features:["SMS alerts","1 address","Film & event alerts","ASP alerts"]},
-                  {key:"annual",name:"Annual · Best Value",price:"$19",per:"/year · save 47%",features:["SMS alerts","3 addresses","Film & event alerts","Priority weather"],feat:true},
-                ].map(p => (
-                  <div key={p.key} className={`price ${p.feat ? "feat" : ""}`}>
-                    <div className="p-name">{p.name}</div>
-                    <div className="p-num">{p.price}</div>
-                    <div className="p-per">{p.per}</div>
-                    {p.features.map(f => <div key={f} className="p-feat">{f}</div>)}
-                    <button className="p-cta" disabled={!!checkoutBusy} onClick={() => handleCheckout(p.key)}>{checkoutBusy===p.key?"LOADING…":"START FREE TRIAL →"}</button>
-                  </div>
-                ))}
+          {/* Pricing */}
+          <div className="prices" style={{padding:"0 24px",maxWidth:560}}>
+            {[
+              {key:"monthly",name:"Monthly",price:"$2.99",per:"/month",features:["SMS alerts","1 address","Film & event alerts","ASP alerts"]},
+              {key:"annual",name:"Annual · Best Value",price:"$19",per:"/year · save 47%",features:["SMS alerts","3 addresses","Film & event alerts","Priority weather"],feat:true},
+            ].map(p => (
+              <div key={p.key} className={`price ${p.feat ? "feat" : ""}`}>
+                <div className="p-name">{p.name}</div>
+                <div className="p-num">{p.price}</div>
+                <div className="p-per">{p.per}</div>
+                {p.features.map(f => <div key={f} className="p-feat">{f}</div>)}
+                <button className="p-cta" disabled={!!checkoutBusy} onClick={() => handleCheckout(p.key)}>{checkoutBusy===p.key?"LOADING…":"START FREE TRIAL →"}</button>
               </div>
+            ))}
+          </div>
 
-              {/* SMS Signup */}
-              <div className="signup" style={{maxWidth:536,margin:"0 24px"}}>
-                <div className="signup-title">GET TEXTED BEFORE IT MATTERS</div>
-                <div className="signup-sub">Street cleaning · Film shoots · Snowstorms · Events</div>
-                <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
-                <button className="p-cta" onClick={() => setShowPaywall(true)} style={{width:"100%"}}>UPGRADE TO UNLIMITED+SAVE →</button>
-              </div>
-            </>
-          )}
+          {/* SMS Signup */}
+          <div className="signup" style={{maxWidth:536,margin:"0 24px"}}>
+            <div className="signup-title">GET TEXTED BEFORE IT MATTERS</div>
+            <div className="signup-sub">Street cleaning · Film shoots · Snowstorms · Events</div>
+            <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
+            <button className="p-cta" onClick={() => setShowPaywall(true)} style={{width:"100%"}}>UPGRADE TO UNLIMITED+SAVE →</button>
+          </div>
 
           <div className="move-car-banner">
             <span className="move-car-badge">COMING SOON</span>
@@ -1530,18 +1520,26 @@ export default function App() {
             {!locData.isEstablishment && <button className="re-btn" onClick={() => loadAll(locData)}>↻ REFRESH</button>}
           </div>
 
-          {/* Map */}
+          {/* Map — show heatmap with polylines when we have GPS coords */}
           {locData.lat && locData.lng && (
             <div className="map-wrap">
-              <ParkMap
-                destLat={selectedEstab?.lat || locData.lat}
-                destLng={selectedEstab?.lng || locData.lng}
-                userLat={coords?.lat}
-                userLng={coords?.lng}
-                isGPS={locData.isGPS}
-                label={selectedEstab?.name || locData.label || locData.street}
-                history={histPins}
-              />
+              {coords?.lat ? (
+                <HeatMap
+                  userLat={coords.lat}
+                  userLng={coords.lng}
+                  onStreetClick={(street) => { setQuery(street); handleSearch(); }}
+                />
+              ) : (
+                <ParkMap
+                  destLat={selectedEstab?.lat || locData.lat}
+                  destLng={selectedEstab?.lng || locData.lng}
+                  userLat={coords?.lat}
+                  userLng={coords?.lng}
+                  isGPS={locData.isGPS}
+                  label={selectedEstab?.name || locData.label || locData.street}
+                  history={histPins}
+                />
+              )}
               <div className="map-legend">
                 {coords?.lat && <div className="map-legend-item"><div className="map-dot" style={{background:"var(--blue)"}} /><span>You</span></div>}
                 {histPins.length > 0 && <div className="map-legend-item"><div className="map-dot" style={{background:"var(--green)"}} /><span>Previous searches</span></div>}
