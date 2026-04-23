@@ -992,6 +992,130 @@ function DraggableCarousel() {
   );
 }
 
+// ─── SAVED LOCATIONS PAGE ────────────────────────────────────────────────────
+function SavedLocationsPage({ onDone }) {
+  const [list, setList] = useState([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/saved-searches`, { headers: Auth.authHeader() });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Failed to load");
+      setList(Array.isArray(data) ? data : []);
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const atLimit = list.length >= 10;
+
+  const addLocation = useCallback(async (place) => {
+    if (!place?.lat || !place?.lng) return;
+    if (atLimit) { setErr("You've reached the 10-location limit. Uncheck one to make room."); return; }
+    setErr(null);
+    try {
+      const label = place.label || place.formatted || "";
+      const r = await fetch(`${API}/saved-searches`, {
+        method: "POST",
+        headers: Auth.authHeader(),
+        body: JSON.stringify({
+          label,
+          street: label,
+          lat: place.lat,
+          lng: place.lng,
+          borough: "",
+          neighborhood: "",
+          city: "",
+          locData: { label, formatted: place.formatted, lat: place.lat, lng: place.lng },
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Failed to save");
+      setList(prev => [data, ...prev]);
+      setQuery("");
+    } catch (e) { setErr(e.message); }
+  }, [atLimit]);
+
+  const removeLocation = useCallback(async (id) => {
+    setBusyId(id);
+    setErr(null);
+    try {
+      const r = await fetch(`${API}/saved-searches/${id}`, { method: "DELETE", headers: Auth.authHeader() });
+      if (!r.ok) { const d = await r.json().catch(()=>({})); throw new Error(d.error || "Failed to remove"); }
+      setList(prev => prev.filter(x => x.id !== id));
+    } catch (e) { setErr(e.message); }
+    finally { setBusyId(null); }
+  }, []);
+
+  return (
+    <div className="dash" style={{maxWidth:600,paddingBottom:60}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 0 16px",borderBottom:"1px solid #1f1f1f",marginBottom:24}}>
+        <div style={{fontFamily:"var(--display)",fontSize:"1.8rem",letterSpacing:".06em"}}>SAVED LOCATIONS</div>
+        <button onClick={onDone} style={{background:"var(--yellow)",border:"none",color:"var(--black)",fontFamily:"var(--display)",fontSize:"1rem",letterSpacing:".1em",padding:"6px 18px",cursor:"pointer"}}>DONE</button>
+      </div>
+
+      <div style={{marginBottom:24}}>
+        <div style={{fontFamily:"var(--mono)",fontSize:".7rem",letterSpacing:".1em",color:atLimit?"var(--muted)":"var(--yellow)",textTransform:"uppercase",marginBottom:8}}>
+          {atLimit ? "Limit Reached · Uncheck One To Add More" : "Add a Location"}
+        </div>
+        <div className="search-box" style={{opacity:atLimit?0.4:1,pointerEvents:atLimit?"none":"auto"}}>
+          <PlacesInput
+            value={query}
+            onChange={setQuery}
+            onPlaceSelect={addLocation}
+            onFocus={()=>{}}
+            onBlur={()=>{}}
+            onEnter={()=>{}}
+            onGPSClick={()=>{}}
+            showDropdown={false}
+          />
+        </div>
+        <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",marginTop:8,letterSpacing:".08em"}}>
+          {list.length} / 10 saved
+        </div>
+      </div>
+
+      {err && <div className="err" style={{marginBottom:16}}>⚠ {err}</div>}
+
+      {loading ? (
+        <div style={{textAlign:"center",padding:"20px",color:"var(--muted)",fontFamily:"var(--mono)",fontSize:".75rem",letterSpacing:".1em"}}>LOADING…</div>
+      ) : list.length === 0 ? (
+        <div style={{textAlign:"center",padding:"40px 20px",color:"var(--muted)",fontFamily:"var(--mono)",fontSize:".75rem",letterSpacing:".05em",lineHeight:1.6}}>No saved locations yet.<br/>Search above to add one.</div>
+      ) : (
+        <div>
+          {list.map(item => (
+            <label key={item.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 0",borderBottom:"1px solid #1f1f1f",cursor:"pointer",opacity:busyId===item.id?0.4:1}}>
+              <input
+                type="checkbox"
+                checked={true}
+                disabled={busyId===item.id}
+                onChange={() => removeLocation(item.id)}
+                style={{width:20,height:20,accentColor:"var(--yellow)",cursor:"pointer",flexShrink:0}}
+              />
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"var(--body)",fontSize:"1.05rem",color:"var(--white)",letterSpacing:".02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {item.label}
+                </div>
+                {(item.neighborhood || item.borough || item.city) && (
+                  <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",letterSpacing:".05em",marginTop:3}}>
+                    {[item.neighborhood, item.borough, item.city].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function App() {
   // All useState hooks first — no exceptions
@@ -1379,6 +1503,9 @@ export default function App() {
                 {user && (
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("account"); }}>Account</div>
                 )}
+                {user?.tier === "unlimited" && (
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("saved"); }}>Saved Locations</div>
+                )}
                 {user && (
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); openPaywall(); }}>Upgrade</div>
                 )}
@@ -1645,6 +1772,11 @@ export default function App() {
             Street Park Now is provided for informational purposes only. We make no warranties regarding the accuracy, completeness, or timeliness of any information. Street Park Now is not liable for any parking fines, towing charges, or other penalties. Always check posted street signs — they are the legal authority.
           </div>
         </div>
+      )}
+
+      {/* SAVED LOCATIONS PAGE */}
+      {phase === "saved" && user?.tier === "unlimited" && (
+        <SavedLocationsPage onDone={resetHome} />
       )}
 
       {/* ACCOUNT PAGE */}
