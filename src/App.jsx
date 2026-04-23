@@ -1174,7 +1174,7 @@ export default function App() {
   const aspOff       = asp?.suspended;
   const wxNow        = weather?.current;
   const wxDaily      = weather?.daily;
-  const severeNow    = wxNow?.weather_code && SEVERE.has(wxNow.weather_code);
+  const severeNow    = !!(wxNow?.weather_code && SEVERE.has(wxNow.weather_code));
   const isMulti      = locData?.isPark || locData?.isZip || locData?.isNeighborhood || locData?.isGPS;
   const histPins     = showHistory && isSubscribed ? savedSearches.filter(s => s.label !== (locData?.label || locData?.street)) : [];
   const limit      = Auth.isLoggedIn() ? 8 : 1;
@@ -1273,9 +1273,17 @@ export default function App() {
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR
+              {homeMapCoords ? "🔥🗺 LIVE PARKING HEAT MAP · TAP A STREET TO SEARCH" : "🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR"}
             </div>
-            <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
+            {homeMapCoords ? (
+              <HeatMap
+                userLat={homeMapCoords.lat}
+                userLng={homeMapCoords.lng}
+                onStreetClick={(street) => { setQuery(street); handleSearch(); }}
+              />
+            ) : (
+              <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
+            )}
           </div>
 
           {/* SCROLLING STATS CAROUSEL */}
