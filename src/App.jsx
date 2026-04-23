@@ -440,7 +440,7 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .search-box button:hover{background:var(--yd)}
 /* CAROUSEL */
 .carousel-section{width:100%;padding:24px 0;border-bottom:1px solid #1f1f1f;overflow:hidden}
-.carousel-label{font-family:var(--mono);font-size:.85rem;color:var(--yellow);letter-spacing:.15em;text-transform:uppercase;text-align:center;margin-bottom:14px}
+.carousel-label{font-family:var(--mono);font-size:.72rem;color:var(--yellow);letter-spacing:.08em;text-transform:uppercase;text-align:center;margin-bottom:14px;white-space:nowrap;overflow:hidden}
 .carousel-track{display:flex;gap:12px;width:max-content;padding:0 12px;cursor:grab;user-select:none;will-change:transform}
 .carousel-track.dragging{cursor:grabbing}
 .carousel-card{background:var(--g2);border:1px solid #2a2a2a;border-radius:8px;padding:20px 24px;min-width:240px;flex-shrink:0}
@@ -1112,7 +1112,7 @@ export default function App() {
           {/* HERO */}
           <div className="hero-section">
             <h1 className="h1">STREET PARK <em>NOW.</em></h1>
-            <p className="app-tagline">Street Parking Info For Your City</p>
+            <p className="app-tagline">Know When To Park And When To Move</p>
             <div className="search-section">
               {searchCount > 0 && (
                 <div className="gate-note" style={{color: Auth.isPaid() ? "var(--yellow)" : remaining === 0 ? "var(--red)" : "var(--yellow)"}}>
