@@ -263,6 +263,37 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
       }
 
       mapRef.current = map;
+
+      // Draw heatmap polylines on this map if data is available
+      const drawHeatOnParkMap = (data) => {
+        if (!data || !data.length) return;
+        const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#555555" };
+        const weights = { red:5, yellow:4, green:3, gray:2 };
+        data.forEach(s => {
+          if (!s.coords || s.coords.length < 2) return;
+          const path = s.coords.map(c => Array.isArray(c) ? {lat:c[0],lng:c[1]} : c);
+          new window.google.maps.Polyline({
+            path, map, geodesic: true,
+            strokeColor: colors[s.urgency] || colors.gray,
+            strokeOpacity: s.urgency === "gray" ? 0.5 : 0.85,
+            strokeWeight: weights[s.urgency] || 2,
+            zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
+          });
+        });
+        console.log("ParkMap drew", data.length, "heatmap polylines");
+      };
+
+      // Draw now if data ready, otherwise wait for prefetch
+      if (_heatmap.data.length) {
+        drawHeatOnParkMap(_heatmap.data);
+      } else {
+        // Poll every second until data arrives (max 30s)
+        let tries = 0;
+        const poll = setInterval(() => {
+          if (_heatmap.data.length) { clearInterval(poll); drawHeatOnParkMap(_heatmap.data); }
+          if (++tries > 30) clearInterval(poll);
+        }, 1000);
+      }
     };
 
     if (window.google?.maps) { initMap(); return; }
@@ -891,6 +922,10 @@ export default function App() {
   const [phone,          setPhone]          = useState("");
   const [signupBusy,     setSignupBusy]     = useState(false);
   const [signedUp,       setSignedUp]       = useState(false);
+  const [smsPhone,       setSmsPhone]       = useState("");
+  const [smsActive,      setSmsActive]      = useState(false);
+  const [smsBusy,        setSmsBusy]        = useState(false);
+  const [smsErr,         setSmsErr]         = useState(null);
   const [signupErr,      setSignupErr]      = useState(null);
   const [checkoutBusy,   setCheckoutBusy]   = useState(null);
   const [showPaywall,    setShowPaywall]    = useState(false);
@@ -1374,14 +1409,53 @@ export default function App() {
             </div>
           </div>
 
-          {/* SMS Signup */}
+          {/* SMS Card */}
           <div className="signup" style={{maxWidth:536,margin:"0 16px 12px"}}>
             <div className="signup-title">GET A TEXT BEFORE IT MATTERS</div>
             <div className="signup-sub">Street cleaning · Film shoots · Snowstorms · Events</div>
-            <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
-            <button className="p-cta" onClick={() => handleCheckout("unlimited-monthly")} style={{width:"100%"}} disabled={!!checkoutBusy}>
-              {checkoutBusy==="unlimited-monthly"?"LOADING…":"UPGRADE TO UNLIMITED+SAVE →"}
-            </button>
+            {Auth.getTier() === "unlimited" ? (
+              smsActive ? (
+                <div className="ok-msg">✅ SMS alerts active! We'll text you before it's time to move.</div>
+              ) : (
+                <>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:10}}>Enter your number to activate SMS alerts</div>
+                  <div className="phone-row">
+                    <input type="tel" placeholder="+1 (917) 555-0100" value={smsPhone} onChange={e => setSmsPhone(e.target.value)}
+                      onKeyDown={async e => {
+                        if (e.key !== "Enter") return;
+                        setSmsBusy(true); setSmsErr(null);
+                        try {
+                          const r = await fetch(`${API}/subscribe`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ phone: smsPhone, street: locData?.street||"", borough: locData?.borough||"", lat: coords?.lat, lng: coords?.lng }) });
+                          if (!r.ok) throw new Error("Failed to activate");
+                          setSmsActive(true);
+                        } catch(e) { setSmsErr("Couldn't activate. Try again."); }
+                        finally { setSmsBusy(false); }
+                      }}
+                    />
+                    <button disabled={smsBusy} onClick={async () => {
+                      setSmsBusy(true); setSmsErr(null);
+                      try {
+                        const r = await fetch(`${API}/subscribe`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ phone: smsPhone, street: locData?.street||"", borough: locData?.borough||"", lat: coords?.lat, lng: coords?.lng }) });
+                        if (!r.ok) throw new Error("Failed");
+                        setSmsActive(true);
+                      } catch(e) { setSmsErr("Couldn't activate. Try again."); }
+                      finally { setSmsBusy(false); }
+                    }}>
+                      {smsBusy ? "…" : "📲 TEXT ME! 👌"}
+                    </button>
+                  </div>
+                  {smsErr && <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--red)",marginTop:6}}>⚠ {smsErr}</div>}
+                  <div className="signup-fine">Data rates may apply · Reply STOP to unsubscribe</div>
+                </>
+              )
+            ) : (
+              <>
+                <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
+                <button className="p-cta" onClick={() => handleCheckout("unlimited-monthly")} style={{width:"100%"}} disabled={!!checkoutBusy}>
+                  {checkoutBusy==="unlimited-monthly"?"LOADING…":"UPGRADE TO UNLIMITED+SAVE →"}
+                </button>
+              </>
+            )}
           </div>
 
           <div className="move-car-banner">
@@ -1390,17 +1464,14 @@ export default function App() {
             <div className="move-car-sub">
               Can't move your car in time? We'll send a trusted driver.<br/>
               Smart key access only · Insured, background-checked drivers.
-              <span style={{color:"#aaaaff",marginTop:6,display:"block",cursor:"pointer"}} onClick={() => window.open("mailto:bassklaft@gmail.com?subject=Street Park Now - Move My Car Waitlist", "_blank")}>Join the waitlist →</span>
+              <span style={{color:"#aaaaff",marginTop:6,display:"block",cursor:"pointer"}} onClick={() => {
+                const userEmail = Auth.getUser()?.email || "";
+                const body = `Please put me on the We'll Move Your Car Waitlist!\n\nAccount info: ${userEmail}`;
+                window.open(`mailto:streetparkinginfo@gmail.com?subject=We'll Move Your Car Waitlist&body=${encodeURIComponent(body)}`, "_blank");
+              }}>Join the waitlist →</span>
             </div>
           </div>
 
-        </div>
-      )}
-
-      {/* Hidden HeatMap — always mounted when we have coords so data prefetches even if user skips home */}
-      {homeMapCoords && phase !== "home" && (
-        <div style={{position:"fixed",top:"-9999px",left:"-9999px",width:"300px",height:"300px",visibility:"hidden"}}>
-          <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} />
         </div>
       )}
 
