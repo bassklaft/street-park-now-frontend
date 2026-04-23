@@ -193,53 +193,82 @@ const fmtKm = km => km < 1 ? `${Math.round(km*1000)}m away` : `${km.toFixed(1)}k
 // ─── MAP ──────────────────────────────────────────────────────────────────────
 function ParkMap({ destLat, destLng, userLat, userLng, label, history = [] }) {
   const ref = useRef(null);
-  const inst = useRef(null);
+  const mapRef = useRef(null);
 
   useEffect(() => {
-    if (!ref.current || inst.current) return;
+    if (!ref.current) return;
     let alive = true;
-    (async () => {
-      if (!window.L) {
-        const lnk = document.createElement("link");
-        lnk.rel = "stylesheet"; lnk.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(lnk);
-        await new Promise(res => { const s = document.createElement("script"); s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"; s.onload = res; document.head.appendChild(s); });
-      }
-      if (!alive || !ref.current) return;
-      const L = window.L;
+
+    const initMap = () => {
+      if (!alive || !ref.current || !window.google?.maps) return;
       const cLat = userLat ? (destLat + userLat) / 2 : destLat;
       const cLng = userLng ? (destLng + userLng) / 2 : destLng;
-      const map = L.map(ref.current, { center: [cLat, cLng], zoom: userLat ? 15 : 16 });
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 }).addTo(map);
 
-      // History — green pins or circles
-      (history || []).forEach(h => {
-        if (!h.lat || !h.lng) return;
-        if (h.type === "establishment") {
-          const icon = L.divIcon({ html: `<svg viewBox="0 0 20 28" width="16" height="22" xmlns="http://www.w3.org/2000/svg"><path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 18 10 18S20 17.5 20 10C20 4.5 15.5 0 10 0z" fill="#38A169"/><circle cx="10" cy="10" r="4" fill="white"/></svg>`, className: "", iconSize: [16,22], iconAnchor: [8,22] });
-          L.marker([h.lat, h.lng], { icon }).addTo(map).bindPopup(`<span style="font-size:12px">🕐 ${h.label}</span>`);
-        } else {
-          L.circle([h.lat, h.lng], { radius: h.type==="zip"?600:400, color:"#38A169", fillColor:"#38A169", fillOpacity:0.12, weight:2, dashArray:"6 4" }).addTo(map).bindPopup(`<span style="font-size:12px">🕐 ${h.label}</span>`);
-        }
+      const map = new window.google.maps.Map(ref.current, {
+        center: { lat: cLat, lng: cLng },
+        zoom: userLat ? 15 : 16,
+        mapTypeId: "roadmap",
+        zoomControl: true,
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+        styles: [
+          { elementType:"geometry", stylers:[{color:"#1a1a1a"}] },
+          { elementType:"labels.text.stroke", stylers:[{color:"#242424"}] },
+          { elementType:"labels.text.fill", stylers:[{color:"#888888"}] },
+          { featureType:"road", elementType:"geometry", stylers:[{color:"#2c2c2c"}] },
+          { featureType:"road.highway", elementType:"geometry", stylers:[{color:"#3c3c3c"}] },
+          { featureType:"water", elementType:"geometry", stylers:[{color:"#000000"}] },
+          { featureType:"poi", stylers:[{visibility:"off"}] },
+          { featureType:"transit", stylers:[{visibility:"off"}] },
+        ],
       });
 
-      // Red destination
-      const rI = L.divIcon({ html: `<svg viewBox="0 0 20 28" width="20" height="28" xmlns="http://www.w3.org/2000/svg"><path d="M10 0C4.5 0 0 4.5 0 10c0 7.5 10 18 10 18S20 17.5 20 10C20 4.5 15.5 0 10 0z" fill="#E53E3E"/><circle cx="10" cy="10" r="4" fill="white"/></svg>`, className: "", iconSize: [20,28], iconAnchor: [10,28], popupAnchor: [0,-28] });
-      L.marker([destLat, destLng], { icon: rI }).addTo(map).bindPopup(`<b style="font-size:13px">🅿 ${label}</b>`).openPopup();
+      // Red destination pin
+      new window.google.maps.Marker({
+        position: { lat: destLat, lng: destLng },
+        map,
+        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:"#E53E3E", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
+        title: label,
+      });
 
-      // Blue user
+      // Blue user pin
       if (userLat && userLng) {
-        const bI = L.divIcon({ html: `<svg viewBox="0 0 18 18" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="9" r="9" fill="#3182CE" opacity="0.3"/><circle cx="9" cy="9" r="5" fill="#3182CE"/><circle cx="9" cy="9" r="2.5" fill="white"/></svg>`, className: "", iconSize: [18,18], iconAnchor: [9,9] });
-        L.marker([userLat, userLng], { icon: bI }).addTo(map).bindPopup(`<span style="font-size:12px">📍 You</span>`);
-        L.polyline([[userLat,userLng],[destLat,destLng]], { color:"#F7C948", weight:2, dashArray:"6,8", opacity:0.7 }).addTo(map);
-        map.fitBounds(L.latLngBounds([[userLat,userLng],[destLat,destLng]]), { padding:[40,40] });
+        new window.google.maps.Marker({
+          position: { lat: userLat, lng: userLng },
+          map,
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor:"#3182CE", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
+          title: "You",
+        });
+        new window.google.maps.Polyline({
+          path: [{ lat: userLat, lng: userLng }, { lat: destLat, lng: destLng }],
+          strokeColor: "#F7C948", strokeOpacity: 0.7, strokeWeight: 2,
+          icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 4 }, offset: "0", repeat: "20px" }],
+          map,
+        });
+        const bounds = new window.google.maps.LatLngBounds();
+        bounds.extend({ lat: userLat, lng: userLng });
+        bounds.extend({ lat: destLat, lng: destLng });
+        map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
       }
-      inst.current = map;
-    })().catch(console.error);
-    return () => { alive = false; if (inst.current) { inst.current.remove(); inst.current = null; } };
-  }, [destLat, destLng, userLat, userLng, label, history]);
 
-  return <div ref={ref} style={{ width:"100%", height:"260px" }} />;
+      mapRef.current = map;
+    };
+
+    if (window.google?.maps) { initMap(); return; }
+    if (document.querySelector('script[src*="maps.googleapis"]')) {
+      const wait = setInterval(() => { if (window.google?.maps) { clearInterval(wait); initMap(); } }, 100);
+      return () => clearInterval(wait);
+    }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_KEY}&libraries=places&loading=async`;
+    script.async = true; script.defer = true;
+    script.onload = () => { if (alive) initMap(); };
+    document.head.appendChild(script);
+    return () => { alive = false; };
+  }, [destLat, destLng, userLat, userLng, label]);
+
+  return <div ref={ref} style={{width:"100%", height:"260px", border:"1px solid #2a2a2a"}} />;
 }
 
 // ─── HEAT MAP ────────────────────────────────────────────────────────────────
@@ -632,6 +661,7 @@ const CITY_STATS = [
   { city:"Minneapolis", tickets:"280,000+", avg:"$40", total:"$11M+" },
   { city:"Dallas", tickets:"1,500,000+", avg:"$40", total:"$60M+" },
   { city:"Sacramento", tickets:"500,000+", avg:"$58", total:"$29M+" },
+  { city:"New Jersey", tickets:"2,100,000+", avg:"$54", total:"$113M+" },
 ];
 
 function DraggableCarousel() {
@@ -712,8 +742,11 @@ function DraggableCarousel() {
         {[...CITY_STATS, ...CITY_STATS].map((s, i) => (
           <div key={i} className="carousel-card">
             <div className="carousel-card-city">{s.city}</div>
-            <div className="carousel-card-num">{s.tickets}</div>
-            <div className="carousel-card-meta">tickets/yr · avg <strong>{s.avg}</strong> · <strong>{s.total}</strong></div>
+            <div style={{display:"flex",alignItems:"baseline",gap:6,marginBottom:3}}>
+              <div className="carousel-card-num">{s.tickets}</div>
+              <div className="carousel-card-meta" style={{whiteSpace:"nowrap"}}>tickets/yr</div>
+            </div>
+            <div className="carousel-card-meta">avg <strong>{s.avg}</strong> · <strong>{s.total}</strong></div>
           </div>
         ))}
       </div>
@@ -762,6 +795,17 @@ export default function App() {
   const [showUserMenu,   setShowUserMenu]   = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showFAQ,        setShowFAQ]        = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // All useCallback hooks next — defined in dependency order
   const resetHome = useCallback(() => {
@@ -1020,7 +1064,7 @@ export default function App() {
             )}
           </div>
           <button className="home-btn" onClick={resetHome}>⌂ HOME</button>
-          <div style={{width:110,display:"flex",justifyContent:"flex-end",position:"relative"}}>
+          <div style={{width:110,display:"flex",justifyContent:"flex-end",position:"relative"}} ref={menuRef}>
             <button 
               className="user-pill" 
               onClick={() => setShowUserMenu(v => !v)}
@@ -1035,12 +1079,12 @@ export default function App() {
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setAuthMode("login"); setShowAuthModal(true); }}>Sign In</div>
                 )}
                 {user && (
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowAccountModal(true); }}>Account</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("account"); }}>Account</div>
                 )}
                 {user && (
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowPaywall(true); }}>Upgrade</div>
                 )}
-                <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowFAQ(true); }}>FAQ</div>
+                <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("faq"); }}>FAQ</div>
                 {user && (
                   <div className="menu-item" style={{color:"var(--red)"}} onClick={() => { setShowUserMenu(false); handleLogout(); }}>Sign Out</div>
                 )}
@@ -1141,6 +1185,105 @@ export default function App() {
       {/* LOADING */}
       {phase === "loading" && (
         <div className="loading"><div className="spin" /><div className="loading-lbl">Scanning NYC databases…</div></div>
+      )}
+
+      {/* FAQ PAGE */}
+      {phase === "faq" && (
+        <div className="dash" style={{maxWidth:600,paddingBottom:60}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"20px 0 16px",borderBottom:"1px solid #1f1f1f",marginBottom:24}}>
+            <button onClick={resetHome} style={{background:"none",border:"1px solid #333",color:"#888",fontFamily:"var(--mono)",fontSize:".6rem",padding:"5px 12px",cursor:"pointer"}}>← BACK</button>
+            <div style={{fontFamily:"var(--display)",fontSize:"1.8rem",letterSpacing:".06em"}}>FAQ</div>
+          </div>
+          {[
+            { q:"Will this prevent me from ever getting a ticket again?", a:"We can't guarantee that — and no app can. Street parking rules are complex, change frequently, and enforcement varies. What we can promise is that we work hard to surface the most accurate, up-to-date information available so you have the best possible chance of moving your car on time. Street Park Now is a tool to help you stay informed, not a substitute for reading posted signs. Always check the signs on your block — they are the legal authority." },
+            { q:"How accurate is the data?", a:"We pull from official city databases, permit records, and real-time sources wherever possible. However, data can lag, cities update rules without notice, and special circumstances like holidays or emergency orders may not always be reflected immediately. We update our data regularly and are always working to improve coverage." },
+            { q:"Which cities are supported?", a:"NYC, Los Angeles, Chicago, San Francisco, Boston, Philadelphia, Washington DC, Seattle, Miami, Atlanta, Toronto, Denver, Portland, Nashville, Austin, Dallas, Sacramento, Minneapolis, and New Jersey (Hoboken, Jersey City, Newark) — with more cities being added regularly." },
+            { q:"What does the heat map show?", a:"The live parking heat map color-codes streets near you based on how soon street cleaning is scheduled. Red = move today or tomorrow. Yellow = move in 2-3 days. Green = safe for 4+ days. Gray = no data available." },
+            { q:"What's included in each plan?", a:"Free Account: 8 searches total. Basic ($4.20/mo or $45/yr): 999 searches, last 2 searches shown on map. Premium ($5.79/mo or $58.99/yr): unlimited searches, last 2 on map. Unlimited+Save ($6.49/mo or $69.99/yr): unlimited searches + save up to 10 locations for one-tap access." },
+            { q:"How do I cancel my subscription?", a:"You can cancel anytime. On iOS, go to Settings → Apple ID → Subscriptions → Street Park Now → Cancel. On the web, manage your subscription through your Stripe billing portal. Cancellations take effect at the end of your current billing period — you keep access until then." },
+            { q:"Can I get a refund?", a:"We offer refunds within 48 hours of purchase if you haven't used more than 5 searches in that period. Contact us at support@streetparknow.app and we'll take care of you. Annual plans are refundable within 7 days of purchase." },
+            { q:"How do I upgrade or downgrade my plan?", a:"Tap the ☰ menu → Upgrade to see all plans and select a new one. Upgrades take effect immediately. Downgrades take effect at the start of your next billing period." },
+            { q:"Is my payment information secure?", a:"Yes. All payments are processed by Stripe, a PCI-compliant payment processor trusted by millions of businesses. We never see or store your credit card information." },
+            { q:"Is my location data stored?", a:"Your location is used only to show nearby parking information in the moment. We do not store your location history or share it with third parties. See our Privacy Policy for full details." },
+            { q:"What is the Unlimited+Save feature?", a:"With Unlimited+Save, you can save up to 10 locations and access them instantly from your home screen with one tap. Each saved location runs a full search including the live heat map. You manage which locations are saved using checkboxes — unchecked locations are removed when you return." },
+            { q:"Does the app work offline?", a:"No — Street Park Now requires an internet connection to fetch live parking data, permits, and the heat map. We recommend checking before you park, not while you're parked with no signal." },
+            { q:"How do I contact support?", a:"Email us at support@streetparknow.app. We typically respond within 24 hours on business days." },
+          ].map((item, i, arr) => (
+            <div key={i} style={{marginBottom:24,paddingBottom:24,borderBottom:i<arr.length-1?"1px solid #1f1f1f":"none"}}>
+              <div style={{fontFamily:"var(--body)",fontWeight:700,fontSize:"1.05rem",color:"var(--yellow)",marginBottom:10,lineHeight:1.3}}>{item.q}</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",lineHeight:1.8,letterSpacing:".02em"}}>{item.a}</div>
+            </div>
+          ))}
+          <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"#444",lineHeight:1.7,marginTop:16,paddingTop:20,borderTop:"1px solid #1f1f1f"}}>
+            Street Park Now is provided for informational purposes only. We make no warranties regarding the accuracy, completeness, or timeliness of any information. Street Park Now is not liable for any parking fines, towing charges, or other penalties. Always check posted street signs — they are the legal authority.
+          </div>
+        </div>
+      )}
+
+      {/* ACCOUNT PAGE */}
+      {phase === "account" && user && (
+        <div className="dash" style={{maxWidth:600,paddingBottom:60}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"20px 0 16px",borderBottom:"1px solid #1f1f1f",marginBottom:24}}>
+            <button onClick={resetHome} style={{background:"none",border:"1px solid #333",color:"#888",fontFamily:"var(--mono)",fontSize:".6rem",padding:"5px 12px",cursor:"pointer"}}>← BACK</button>
+            <div style={{fontFamily:"var(--display)",fontSize:"1.8rem",letterSpacing:".06em"}}>MY ACCOUNT</div>
+          </div>
+
+          {/* Profile */}
+          <div style={{background:"var(--g1)",padding:"16px",marginBottom:2,borderRadius:2}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>NAME</div>
+            <div style={{fontFamily:"var(--body)",fontSize:"1.1rem",color:"var(--white)",fontWeight:600}}>{user.name}</div>
+          </div>
+          <div style={{background:"var(--g1)",padding:"16px",marginBottom:20,borderRadius:2}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>EMAIL</div>
+            <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)"}}>{user.email}</div>
+          </div>
+
+          {/* Plan */}
+          <div style={{background:"var(--g1)",border:"1px solid #2a2a2a",padding:"16px",marginBottom:2,borderRadius:2}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:8}}>CURRENT PLAN</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div>
+                <div style={{fontFamily:"var(--display)",fontSize:"1.4rem",color:"var(--yellow)",letterSpacing:".06em"}}>
+                  {user.tier==="unlimited"?"UNLIMITED+SAVE":user.tier==="premium"?"PREMIUM":user.tier==="basic"?"BASIC":"FREE"}
+                </div>
+                <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",marginTop:4}}>
+                  {user.tier==="unlimited"?"Unlimited searches + saved locations":user.tier==="premium"?"Unlimited searches":user.tier==="basic"?"999 searches per period":"8 free searches total"}
+                </div>
+              </div>
+              {user.tier !== "unlimited" && (
+                <button onClick={() => setShowPaywall(true)} style={{background:"var(--yellow)",color:"#000",border:"none",fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 14px",cursor:"pointer",letterSpacing:".06em",whiteSpace:"nowrap"}}>
+                  UPGRADE →
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Billing */}
+          {user.tier !== "free" && (
+            <div style={{background:"var(--g1)",padding:"16px",marginBottom:2,cursor:"pointer",borderRadius:2}}
+              onClick={() => window.open("https://billing.stripe.com/p/login/test_00000","_blank")}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>BILLING & PAYMENT</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:".72rem",color:"var(--yellow)"}}>Manage billing, invoices & cancel →</div>
+            </div>
+          )}
+
+          {/* Usage */}
+          <div style={{background:"var(--g1)",padding:"16px",marginBottom:24,borderRadius:2}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:6}}>SEARCHES USED</div>
+            <div style={{fontFamily:"var(--display)",fontSize:"2rem",color:"var(--white)",lineHeight:1}}>
+              {searchCount}
+              <span style={{fontFamily:"var(--mono)",fontSize:".7rem",color:"var(--muted)",marginLeft:8}}>
+                {user.tier==="unlimited"||user.tier==="premium"?"/ unlimited":user.tier==="basic"?"/ 999":"/ 8 free"}
+              </span>
+            </div>
+          </div>
+
+          {/* Support */}
+          <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",lineHeight:2}}>
+            Questions? <a href="mailto:support@streetparknow.app" style={{color:"var(--yellow)"}}>support@streetparknow.app</a><br/>
+            <a href="https://streetparknow.vercel.app/privacy.html" target="_blank" rel="noreferrer" style={{color:"#555"}}>Privacy Policy</a>
+          </div>
+        </div>
       )}
 
       {/* AMBIGUOUS PICKER */}
@@ -1439,148 +1582,6 @@ export default function App() {
         </div>
       )}
 
-      {/* FAQ MODAL */}
-      {showFAQ && (
-        <div className="auth-overlay" onClick={() => setShowFAQ(false)}>
-          <div className="auth-modal" onClick={e => e.stopPropagation()} style={{maxHeight:"80vh",overflowY:"auto"}}>
-            <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#555",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowFAQ(false)}>✕</button>
-            <div className="auth-title">FAQ</div>
-            {[
-              {
-                q: "Will this prevent me from ever getting a ticket again?",
-                a: "We can't guarantee that — and no app can. Street parking rules are complex, change frequently, and enforcement varies. What we can promise is that we work hard to surface the most accurate, up-to-date information available so you have the best possible chance of moving your car on time. Street Park Now is a tool to help you stay informed, not a substitute for reading posted signs. Always check the signs on your block — they are the legal authority."
-              },
-              {
-                q: "How accurate is the data?",
-                a: "We pull from official city databases, permit records, and real-time sources wherever possible. However, data can lag, cities update rules without notice, and special circumstances like holidays or emergency orders may not always be reflected immediately. We update our data regularly and are always working to improve coverage."
-              },
-              {
-                q: "Which cities are supported?",
-                a: "NYC, Los Angeles, Chicago, San Francisco, Boston, Philadelphia, Washington DC, Seattle, Miami, Atlanta, Toronto, Denver, Portland, Nashville, Austin, and Minneapolis — with more cities being added regularly."
-              },
-              {
-                q: "What does the heat map show?",
-                a: "The live parking heat map color-codes streets near you based on how soon street cleaning is scheduled. Red = move today or tomorrow. Yellow = move in 2-3 days. Green = safe for 4+ days. Gray = no data available."
-              },
-              {
-                q: "What's included in each plan?",
-                a: "Free Account: 8 searches total. Basic ($4.20/mo or $45/yr): 999 searches, last 2 searches shown on map. Premium ($5.79/mo or $58.99/yr): unlimited searches, last 2 on map. Unlimited+Save ($6.49/mo or $69.99/yr): unlimited searches + save up to 10 locations for one-tap access."
-              },
-              {
-                q: "How do I cancel my subscription?",
-                a: "You can cancel anytime. On iOS, go to Settings → Apple ID → Subscriptions → Street Park Now → Cancel. On the web, manage your subscription through your Stripe billing portal. Cancellations take effect at the end of your current billing period — you keep access until then."
-              },
-              {
-                q: "Can I get a refund?",
-                a: "We offer refunds within 48 hours of purchase if you haven't used more than 5 searches in that period. Contact us at support@streetparknow.app and we'll take care of you. Annual plans are refundable within 7 days of purchase."
-              },
-              {
-                q: "How do I upgrade or downgrade my plan?",
-                a: "Tap the ☰ menu → Upgrade to see all plans and select a new one. Upgrades take effect immediately. Downgrades take effect at the start of your next billing period."
-              },
-              {
-                q: "Is my payment information secure?",
-                a: "Yes. All payments are processed by Stripe, a PCI-compliant payment processor trusted by millions of businesses. We never see or store your credit card information."
-              },
-              {
-                q: "Is my location data stored?",
-                a: "Your location is used only to show nearby parking information in the moment. We do not store your location history or share it with third parties. See our Privacy Policy at streetparknow.vercel.app/privacy.html for full details."
-              },
-              {
-                q: "What is the Unlimited+Save feature?",
-                a: "With Unlimited+Save, you can save up to 10 locations and access them instantly from your home screen with one tap. Each saved location runs a full search including the live heat map. You manage which locations are saved using checkboxes — unchecked locations are removed when you return."
-              },
-              {
-                q: "Does the app work offline?",
-                a: "No — Street Park Now requires an internet connection to fetch live parking data, permits, and the heat map. We recommend checking before you park, not while you're parked with no signal."
-              },
-              {
-                q: "How do I contact support?",
-                a: "Email us at support@streetparknow.app. We typically respond within 24 hours on business days."
-              },
-            ].map((item, i, arr) => (
-              <div key={i} style={{marginBottom:24,paddingBottom:20,borderBottom:i < arr.length - 1 ? "1px solid #1f1f1f" : "none"}}>
-                <div style={{fontFamily:"var(--body)",fontWeight:700,fontSize:"1rem",color:"var(--yellow)",marginBottom:8}}>{item.q}</div>
-                <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",lineHeight:1.7,letterSpacing:".03em"}}>{item.a}</div>
-              </div>
-            ))}
-            <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"#444",lineHeight:1.6,marginTop:8,paddingTop:16,borderTop:"1px solid #1f1f1f"}}>
-              Street Park Now is provided for informational purposes only. We make no warranties, express or implied, regarding the accuracy, completeness, or timeliness of any information. Use of this app does not constitute legal or parking advice. Street Park Now is not liable for any parking fines, towing charges, or other penalties incurred as a result of reliance on information provided by this app. Always check posted street signs — they are the legal authority.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ACCOUNT MODAL */}
-      {showAccountModal && user && (
-        <div className="auth-overlay" onClick={() => setShowAccountModal(false)}>
-          <div className="auth-modal" onClick={e => e.stopPropagation()} style={{maxHeight:"85vh",overflowY:"auto"}}>
-            <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#555",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowAccountModal(false)}>✕</button>
-            <div className="auth-title" style={{marginBottom:20}}>MY ACCOUNT</div>
-
-            {/* Profile */}
-            <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:2}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>NAME</div>
-              <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)",fontWeight:600}}>{user.name}</div>
-            </div>
-            <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:16}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>EMAIL</div>
-              <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)"}}>{user.email}</div>
-            </div>
-
-            {/* Plan */}
-            <div style={{background:"var(--g1)",border:"1px solid #2a2a2a",padding:"14px 16px",marginBottom:2}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:6}}>CURRENT PLAN</div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div>
-                  <div style={{fontFamily:"var(--display)",fontSize:"1.3rem",color:"var(--yellow)",letterSpacing:".06em"}}>
-                    {user.tier === "unlimited" ? "UNLIMITED+SAVE" : user.tier === "premium" ? "PREMIUM" : user.tier === "basic" ? "BASIC" : "FREE"}
-                  </div>
-                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)",marginTop:3}}>
-                    {user.tier === "unlimited" ? "Unlimited searches + saved locations" :
-                     user.tier === "premium"   ? "Unlimited searches" :
-                     user.tier === "basic"     ? "999 searches per period" :
-                     "8 free searches total"}
-                  </div>
-                </div>
-                {user.tier !== "unlimited" && (
-                  <button onClick={() => { setShowAccountModal(false); setShowPaywall(true); }}
-                    style={{background:"var(--yellow)",color:"#000",border:"none",fontFamily:"var(--mono)",fontSize:".6rem",padding:"6px 12px",cursor:"pointer",letterSpacing:".06em",whiteSpace:"nowrap"}}>
-                    UPGRADE →
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Billing */}
-            {user.tier !== "free" && (
-              <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:2,cursor:"pointer"}}
-                onClick={() => window.open("https://billing.stripe.com/p/login/test_00000", "_blank")}>
-                <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>BILLING & PAYMENT</div>
-                <div style={{fontFamily:"var(--mono)",fontSize:".7rem",color:"var(--yellow)"}}>Manage billing, invoices & cancel →</div>
-              </div>
-            )}
-
-            {/* Usage */}
-            <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:16}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>SEARCHES USED</div>
-              <div style={{fontFamily:"var(--display)",fontSize:"1.5rem",color:"var(--white)"}}>
-                {searchCount} <span style={{fontSize:".8rem",color:"var(--muted)"}}>
-                  {user.tier === "unlimited" || user.tier === "premium" ? "/ unlimited" :
-                   user.tier === "basic" ? "/ 999" : "/ 8 free"}
-                </span>
-              </div>
-            </div>
-
-            {/* Support */}
-            <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",textAlign:"center",lineHeight:1.8}}>
-              Questions? <a href="mailto:support@streetparknow.app" style={{color:"var(--yellow)"}}>support@streetparknow.app</a><br/>
-              <a href="https://streetparknow.vercel.app/privacy.html" target="_blank" style={{color:"#555"}}>Privacy Policy</a>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* AUTH MODAL */}
       {showAuthModal && (
         <div className="auth-overlay" onClick={() => setShowAuthModal(false)}>
@@ -1615,38 +1616,44 @@ export default function App() {
       {/* PAYWALL */}
       {showPaywall && (
         <div className="paywall-overlay" onClick={() => setShowPaywall(false)}>
-          <div className="paywall-sheet" onClick={e => e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto",width:"100%",maxWidth:560}}>
+          <div className="paywall-sheet" onClick={e => e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto",width:"100%",maxWidth:560,background:"#0e0e0e",position:"relative"}}>
             <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#555",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowPaywall(false)}>✕</button>
             <div className="paywall-title" style={{marginBottom:4}}>CHOOSE YOUR PLAN</div>
             <div className="paywall-sub" style={{marginBottom:20}}>All plans include the live parking heat map, street cleaning schedules, film permits, events & weather.</div>
 
             {/* Feature comparison table */}
-            <div style={{overflowX:"auto",marginBottom:20}}>
+            <div style={{overflowX:"auto",marginBottom:20,background:"#141414",border:"1px solid #2a2a2a",borderRadius:4}}>
               <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"var(--mono)",fontSize:".62rem"}}>
                 <thead>
-                  <tr>
-                    <th style={{textAlign:"left",padding:"8px 8px 8px 0",color:"var(--muted)",fontWeight:400,borderBottom:"1px solid #2a2a2a"}}>Feature</th>
-                    <th style={{padding:"8px",color:"var(--white)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Basic</th>
-                    <th style={{padding:"8px",color:"#aaaaff",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Premium</th>
-                    <th style={{padding:"8px",color:"var(--yellow)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Unlimited<br/>+Save</th>
+                  <tr style={{background:"#1a1a1a"}}>
+                    <th style={{textAlign:"left",padding:"12px 12px 12px 14px",color:"var(--white)",fontWeight:600,borderBottom:"1px solid #2a2a2a"}}>Feature</th>
+                    <th style={{padding:"12px 8px",color:"var(--white)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Basic</th>
+                    <th style={{padding:"12px 8px",color:"#aaaaff",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Premium</th>
+                    <th style={{padding:"12px 8px",color:"var(--yellow)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Unlimited<br/>+Save</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ["Searches",           "999/period", "Unlimited", "Unlimited"],
-                    ["Live Heat Map",      "✓", "✓", "✓"],
-                    ["Street Cleaning",    "✓", "✓", "✓"],
-                    ["Film Permits",       "✓", "✓", "✓"],
-                    ["Events & Weather",   "✓", "✓", "✓"],
-                    ["Recent 2 on Map",    "✓", "✓", "✓"],
-                    ["Saved Locations",    "—", "—", "Up to 10"],
-                    ["One-Tap Rerun",      "—", "—", "✓"],
-                  ].map(([feat, b, p, u]) => (
-                    <tr key={feat}>
-                      <td style={{padding:"10px 8px 10px 0",color:"var(--muted)",borderBottom:"1px solid #1a1a1a"}}>{feat}</td>
-                      <td style={{padding:"10px 8px",textAlign:"center",color: b==="✓"?"var(--green)":b==="—"?"#333":"var(--white)",borderBottom:"1px solid #1a1a1a"}}>{b}</td>
-                      <td style={{padding:"10px 8px",textAlign:"center",color: p==="✓"?"var(--green)":p==="—"?"#333":"#aaaaff",borderBottom:"1px solid #1a1a1a"}}>{p}</td>
-                      <td style={{padding:"10px 8px",textAlign:"center",color: u==="✓"||u.includes("Up")?"var(--green)":u==="—"?"#333":"var(--yellow)",borderBottom:"1px solid #1a1a1a"}}>{u}</td>
+                    ["Searches",         "999/period",  "Unlimited",  "Unlimited"],
+                    ["Live Heat Map",    "✓",           "✓",          "✓"],
+                    ["Street Cleaning",  "✓",           "✓",          "✓"],
+                    ["Film Permits",     "✓",           "✓",          "✓"],
+                    ["Events & Weather", "✓",           "✓",          "✓"],
+                    ["Recent 2 on Map",  "✓",           "✓",          "✓"],
+                    ["Saved Locations",  "✗",           "✗",          "Up to 10"],
+                    ["One-Tap Rerun",    "✗",           "✗",          "✓"],
+                  ].map(([feat, b, p, u], ri) => (
+                    <tr key={feat} style={{background: ri%2===0?"#141414":"#121212"}}>
+                      <td style={{padding:"11px 12px 11px 14px",color:"var(--white)",borderBottom:"1px solid #1f1f1f",fontWeight:500}}>{feat}</td>
+                      <td style={{padding:"11px 8px",textAlign:"center",borderBottom:"1px solid #1f1f1f",
+                        color:b==="✓"?"#38A169":b==="✗"?"#E53E3E":b.includes("999")?"var(--white)":"var(--white)",
+                        fontWeight:b==="✓"||b==="✗"?"700":"400",fontSize:b==="✓"||b==="✗"?"1rem":".62rem"}}>{b}</td>
+                      <td style={{padding:"11px 8px",textAlign:"center",borderBottom:"1px solid #1f1f1f",
+                        color:p==="✓"?"#38A169":p==="✗"?"#E53E3E":"#aaaaff",
+                        fontWeight:p==="✓"||p==="✗"?"700":"400",fontSize:p==="✓"||p==="✗"?"1rem":".62rem"}}>{p}</td>
+                      <td style={{padding:"11px 8px",textAlign:"center",borderBottom:"1px solid #1f1f1f",
+                        color:u==="✓"?"#38A169":u==="✗"?"#E53E3E":u.includes("Up")?"#38A169":"var(--yellow)",
+                        fontWeight:u==="✓"||u==="✗"?"700":"400",fontSize:u==="✓"||u==="✗"?"1rem":".62rem"}}>{u}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1656,15 +1663,13 @@ export default function App() {
             {/* Pricing cards */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
               {[
-                { tier:"Basic",          color:"var(--white)",  monthly:"$4.20/mo", annual:"$45/yr",    monthlyKey:"basic-monthly",   annualKey:"basic-annual",    save:"Save 11%" },
-                { tier:"Premium",        color:"#aaaaff",       monthly:"$5.79/mo", annual:"$58.99/yr", monthlyKey:"premium-monthly", annualKey:"premium-annual",  save:"Best Value" },
+                { tier:"Basic",          color:"var(--white)",  monthly:"$4.20/mo", annual:"$45/yr",    monthlyKey:"basic-monthly",    annualKey:"basic-annual",    save:"Save 11%" },
+                { tier:"Premium",        color:"#aaaaff",       monthly:"$5.79/mo", annual:"$58.99/yr", monthlyKey:"premium-monthly",  annualKey:"premium-annual",  save:"Best Value" },
                 { tier:"Unlimited+Save", color:"var(--yellow)", monthly:"$6.49/mo", annual:"$69.99/yr", monthlyKey:"unlimited-monthly",annualKey:"unlimited-annual",save:"Save 10%" },
               ].map(p => (
-                <div key={p.tier} style={{background:"var(--g1)",border:`1px solid ${p.color}22`,padding:"14px 10px",textAlign:"center"}}>
+                <div key={p.tier} style={{background:"#141414",border:`1px solid ${p.color}44`,padding:"14px 10px",textAlign:"center"}}>
                   <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:p.color,letterSpacing:".08em",marginBottom:10,fontWeight:700}}>{p.tier}</div>
-                  <button onClick={() => handleCheckout(p.monthlyKey)} style={{width:"100%",background:"transparent",border:`1px solid ${p.color}`,color:p.color,fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",marginBottom:6,transition:"background .15s"}}
-                    onMouseOver={e => e.target.style.background=`${p.color}22`}
-                    onMouseOut={e => e.target.style.background="transparent"}>
+                  <button onClick={() => handleCheckout(p.monthlyKey)} style={{width:"100%",background:"transparent",border:`1px solid ${p.color}`,color:p.color,fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",marginBottom:6}}>
                     {p.monthly}
                   </button>
                   <button onClick={() => handleCheckout(p.annualKey)} style={{width:"100%",background:p.color,border:`1px solid ${p.color}`,color:"#000",fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",fontWeight:700}}>
