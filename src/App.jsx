@@ -191,7 +191,7 @@ const haversineKm = (a,b,c,d) => { const R=6371,dL=(c-a)*Math.PI/180,dG=(d-b)*Ma
 const fmtKm = km => km < 1 ? `${Math.round(km*1000)}m away` : `${km.toFixed(1)}km away`;
 
 // ─── MAP ──────────────────────────────────────────────────────────────────────
-function ParkMap({ destLat, destLng, userLat, userLng, label, history = [] }) {
+function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGPS = false }) {
   const ref = useRef(null);
   const mapRef = useRef(null);
 
@@ -224,13 +224,15 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [] }) {
         ],
       });
 
-      // Red destination pin
-      new window.google.maps.Marker({
-        position: { lat: destLat, lng: destLng },
-        map,
-        icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:"#E53E3E", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
-        title: label,
-      });
+      // Red destination pin — only for non-GPS searches
+      if (!isGPS) {
+        new window.google.maps.Marker({
+          position: { lat: destLat, lng: destLng },
+          map,
+          icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:"#E53E3E", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
+          title: label,
+        });
+      }
 
       // Blue user pin
       if (userLat && userLng) {
@@ -1376,8 +1378,9 @@ export default function App() {
               <ParkMap
                 destLat={selectedEstab?.lat || locData.lat}
                 destLng={selectedEstab?.lng || locData.lng}
-                userLat={coords?.lat !== locData.lat ? coords?.lat : null}
-                userLng={coords?.lng !== locData.lng ? coords?.lng : null}
+                userLat={coords?.lat}
+                userLng={coords?.lng}
+                isGPS={locData.isGPS}
                 label={selectedEstab?.name || locData.label || locData.street}
                 history={histPins}
               />
