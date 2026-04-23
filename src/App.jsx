@@ -862,7 +862,9 @@ export default function App() {
       loc.isPark && loc.parkStreets?.length ? loc.parkStreets : 
       (loc.isZip || loc.isNeighborhood) && loc.zipStreets?.length ? loc.zipStreets :
       loc.isGPS && loc.nearbyStreets?.length ? loc.nearbyStreets :
-      [loc.street];
+      loc.street ? [loc.street] : [];
+
+    if (!streets.length) { setPhase("dash"); return; }
 
     // Use batch for multiple streets — one Claude call instead of N, much faster
     const cleaningCall = streets.length > 1
@@ -951,7 +953,7 @@ export default function App() {
         },
         () => {
           setLocationAllowed(false);
-          if (!homeMapCoords) setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+          if (!homeMapCoords) 
         }
       );
     }
@@ -997,7 +999,7 @@ export default function App() {
   // Check location permission on load — set coords for heatmap, don't auto-navigate away
   useEffect(() => {
     if (!navigator.geolocation) {
-      setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+      
       return;
     }
     navigator.permissions?.query({ name: "geolocation" }).then(perm => {
@@ -1011,10 +1013,10 @@ export default function App() {
         );
       } else if (perm.state === "denied") {
         setLocationAllowed(false);
-        setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+        
       } else {
         // Not yet determined — show NYC by default
-        setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+        
       }
     }).catch(() => {
       navigator.geolocation.getCurrentPosition(
@@ -1022,7 +1024,7 @@ export default function App() {
           setLocationAllowed(true);
           setHomeMapCoords({ lat, lng });
         },
-        () => { setLocationAllowed(false); setHomeMapCoords({ lat: 40.7580, lng: -73.9855 }); }
+        () => { setLocationAllowed(false);  }
       );
     });
   }, []);
