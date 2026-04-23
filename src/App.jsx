@@ -210,7 +210,7 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
       if (!cLat || !cLng) return;
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: cLat, lng: cLng },
-        zoom: userLat ? 15 : 16,
+        zoom: userLat ? 14 : 15,
         mapTypeId: "roadmap",
         zoomControl: true,
         streetViewControl: false,
@@ -453,7 +453,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
 
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: userLat, lng: userLng },
-        zoom: 15,
+        zoom: 14,
         mapTypeId: "roadmap",
         disableDefaultUI: false,
         zoomControl: true,
@@ -1031,7 +1031,12 @@ export default function App() {
     tickSearch();
     setErr(null); setPhase("loading");
     try {
-      const loc = await geocode(q, coords?.lat, coords?.lng);
+      // If query looks like a street address without a city, append known city
+      let searchQ = q;
+      const looksLikeAddress = /^\d+\s+\w/.test(q) && !/brooklyn|manhattan|queens|bronx|chicago|los angeles|san francisco|boston|philadelphia|seattle|miami|atlanta|denver|nashville|austin|dallas|portland|minneapolis|sacramento|toronto|new york|ny|nyc/i.test(q);
+      if (looksLikeAddress && locData?.city) searchQ = `${q}, ${locData.city}`;
+      else if (looksLikeAddress && locData?.borough) searchQ = `${q}, ${locData.borough}`;
+      const loc = await geocode(searchQ, coords?.lat, coords?.lng);
       console.log("Geocode result:", loc.type, "isNeighborhood:", loc.isNeighborhood, "zipStreets:", loc.zipStreets?.length);
       if (loc.type === "ambiguous") {
         setLocData(loc);
@@ -1483,6 +1488,23 @@ export default function App() {
       {phase === "dash" && locData && (
         <div className="dash">
 
+          {/* New search bar */}
+          <div style={{padding:"10px 20px",borderBottom:"1px solid #1a1a1a"}}>
+            <div className="search-box" style={{maxWidth:"100%"}}>
+              <PlacesInput
+                value={query}
+                onChange={setQuery}
+                onPlaceSelect={handlePlaceSelect}
+                onFocus={handleSearchFocus}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                onEnter={handleSearch}
+                onGPSClick={handleGPS}
+                showDropdown={searchFocused && !query}
+              />
+              <button onClick={handleSearch}>GO</button>
+            </div>
+          </div>
+
           {/* Loc bar */}
           <div className="loc-bar">
             <div>
@@ -1681,12 +1703,17 @@ export default function App() {
                     {weather.hourly && (() => {
                       const now = new Date();
                       const currentHour = now.getHours();
+                      // Use local date string not UTC
+                      const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
                       const times = weather.hourly.time || [];
-                      const todayStr = now.toISOString().split("T")[0];
                       const nextHours = times
                         .map((t, i) => ({ t, i }))
-                        .filter(({ t }) => t.startsWith(todayStr) && parseInt(t.split("T")[1]) >= currentHour)
+                        .filter(({ t }) => {
+                          const [datePart, timePart] = t.split("T");
+                          return datePart === todayStr && parseInt(timePart) >= currentHour;
+                        })
                         .slice(0, 5);
+                      if (!nextHours.length) return null;
                       return (
                         <div style={{marginBottom:12}}>
                           <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:6}}>TODAY · HOURLY</div>
