@@ -97,7 +97,7 @@ const Auth = {
   canSearch:   (count) => {
     if (Auth.isPaid()) return true;
     if (Auth.isLoggedIn()) return count < 8;
-    return count < 1;
+    return count < 3;
   },
   authHeader:  () => ({ "Authorization": `Bearer ${Auth.getToken()}`, "Content-Type": "application/json" }),
 };
@@ -1071,7 +1071,7 @@ export default function App() {
     const count = Auth.getCount();
     if (Auth.isPaid()) return true;
     if (Auth.isLoggedIn() && count < 8) return true;
-    if (!Auth.isLoggedIn() && count < 1) return true;
+    if (!Auth.isLoggedIn() && count < 3) return true;
     // Maxed out
     if (!Auth.isLoggedIn()) { openAuth("signup"); return false; }
     openPaywall(); return false;
@@ -1348,7 +1348,7 @@ export default function App() {
   const severeNow    = !!(wxNow?.weather_code && SEVERE.has(wxNow.weather_code));
   const isMulti      = locData?.isPark || locData?.isZip || locData?.isNeighborhood || locData?.isGPS;
   const histPins     = showHistory && isSubscribed ? savedSearches.filter(s => s.label !== (locData?.label || locData?.street)) : [];
-  const limit      = Auth.isLoggedIn() ? 8 : 1;
+  const limit      = Auth.isLoggedIn() ? 8 : 3;
   const remaining  = Math.max(0, limit - searchCount);
 
   return (
