@@ -314,16 +314,60 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
 
 // ─── COVERAGE MAP ─────────────────────────────────────────────────────────────
 const COVERED_CITIES = [
-  { name: "New York", lat: 40.7128, lng: -74.0060 },
-  { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
-  { name: "Chicago", lat: 41.8781, lng: -87.6298 },
-  { name: "San Francisco", lat: 37.7749, lng: -122.4194 },
-  { name: "Boston", lat: 42.3601, lng: -71.0589 },
-  { name: "Philadelphia", lat: 39.9526, lng: -75.1652 },
-  { name: "Washington DC", lat: 38.9072, lng: -77.0369 },
-  { name: "Seattle", lat: 47.6062, lng: -122.3321 },
-  { name: "Miami", lat: 25.7617, lng: -80.1918 },
-  { name: "Atlanta", lat: 33.7490, lng: -84.3880 },
+  // NYC neighborhoods
+  { name: "Williamsburg", lat: 40.7081, lng: -73.9571 },
+  { name: "Bushwick", lat: 40.6944, lng: -73.9213 },
+  { name: "Park Slope", lat: 40.6681, lng: -73.9800 },
+  { name: "Crown Heights", lat: 40.6694, lng: -73.9448 },
+  { name: "Astoria", lat: 40.7721, lng: -73.9302 },
+  { name: "Flushing", lat: 40.7675, lng: -73.8330 },
+  { name: "Harlem", lat: 40.8116, lng: -73.9465 },
+  { name: "Upper West Side", lat: 40.7870, lng: -73.9754 },
+  { name: "Chelsea", lat: 40.7465, lng: -74.0014 },
+  { name: "East Village", lat: 40.7265, lng: -73.9815 },
+  { name: "Greenpoint", lat: 40.7292, lng: -73.9543 },
+  { name: "Sunset Park", lat: 40.6457, lng: -74.0051 },
+  { name: "The Bronx", lat: 40.8448, lng: -73.8648 },
+  { name: "Staten Island", lat: 40.5795, lng: -74.1502 },
+  { name: "Hoboken", lat: 40.7440, lng: -74.0324 },
+  // LA neighborhoods
+  { name: "Silver Lake", lat: 34.0870, lng: -118.2707 },
+  { name: "Venice", lat: 33.9850, lng: -118.4695 },
+  { name: "Hollywood", lat: 34.0928, lng: -118.3287 },
+  { name: "Koreatown LA", lat: 34.0584, lng: -118.3006 },
+  { name: "Downtown LA", lat: 34.0430, lng: -118.2673 },
+  // Chicago neighborhoods
+  { name: "Wicker Park", lat: 41.9083, lng: -87.6779 },
+  { name: "Lincoln Park", lat: 41.9239, lng: -87.6517 },
+  { name: "Hyde Park Chicago", lat: 41.7943, lng: -87.5907 },
+  { name: "Wrigleyville", lat: 41.9484, lng: -87.6553 },
+  // SF neighborhoods
+  { name: "Mission District", lat: 37.7599, lng: -122.4148 },
+  { name: "Castro", lat: 37.7609, lng: -122.4350 },
+  { name: "SOMA", lat: 37.7785, lng: -122.3948 },
+  { name: "Noe Valley", lat: 37.7502, lng: -122.4337 },
+  // Boston neighborhoods
+  { name: "South End Boston", lat: 42.3398, lng: -71.0714 },
+  { name: "Cambridge", lat: 42.3736, lng: -71.1097 },
+  { name: "Somerville", lat: 42.3876, lng: -71.0995 },
+  // Philadelphia neighborhoods
+  { name: "Fishtown", lat: 39.9732, lng: -75.1333 },
+  { name: "South Philly", lat: 39.9219, lng: -75.1695 },
+  { name: "Northern Liberties", lat: 39.9631, lng: -75.1393 },
+  // DC neighborhoods
+  { name: "Adams Morgan", lat: 38.9219, lng: -77.0424 },
+  { name: "Capitol Hill DC", lat: 38.8855, lng: -76.9971 },
+  { name: "Georgetown", lat: 38.9076, lng: -77.0723 },
+  // Seattle neighborhoods
+  { name: "Capitol Hill Seattle", lat: 47.6236, lng: -122.3148 },
+  { name: "Fremont Seattle", lat: 47.6516, lng: -122.3508 },
+  // Miami neighborhoods
+  { name: "Wynwood", lat: 25.8006, lng: -80.1993 },
+  { name: "South Beach", lat: 25.7825, lng: -80.1300 },
+  // Atlanta
+  { name: "Midtown Atlanta", lat: 33.7856, lng: -84.3831 },
+  { name: "Little Five Points", lat: 33.7656, lng: -84.3513 },
+  // Other cities
   { name: "Denver", lat: 39.7392, lng: -104.9903 },
   { name: "Nashville", lat: 36.1627, lng: -86.7816 },
   { name: "Austin", lat: 30.2672, lng: -97.7431 },
@@ -332,8 +376,9 @@ const COVERED_CITIES = [
   { name: "Minneapolis", lat: 44.9778, lng: -93.2650 },
   { name: "Sacramento", lat: 38.5816, lng: -121.4944 },
   { name: "San Diego", lat: 32.7157, lng: -117.1611 },
-  { name: "New Jersey", lat: 40.7282, lng: -74.0776 },
   { name: "Toronto", lat: 43.6532, lng: -79.3832 },
+  { name: "North York", lat: 43.7615, lng: -79.4111 },
+  { name: "Scarborough", lat: 43.7764, lng: -79.2318 },
 ];
 
 // States that contain our covered cities
@@ -431,14 +476,26 @@ function CoverageMap({ onCityClick }) {
   return (
     <div style={{position:"relative"}}>
       <div ref={ref} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111"}} />
-      <div style={{display:"flex",gap:16,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",alignItems:"center"}}>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{display:"flex",gap:10,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
           <div style={{width:16,height:8,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.6)",borderRadius:2}} />
-          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>Covered state</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--white)"}}>Covered state</span>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
           <div style={{width:8,height:8,borderRadius:"50%",background:"#F7C948",border:"1px solid #fff"}} />
-          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>City · tap to search</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--white)"}}>Neighborhood</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:16,height:4,background:"#E53E3E",borderRadius:2}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--white)"}}>Move today</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:16,height:4,background:"#F7C948",borderRadius:2}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--white)"}}>Move soon</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          <div style={{width:16,height:4,background:"#38A169",borderRadius:2}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--white)"}}>Safe 4+ days</span>
         </div>
       </div>
     </div>
