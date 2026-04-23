@@ -335,34 +335,48 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
         if (!alive || !mapRef.current) return;
         const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
         const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
+        let drawn = 0;
         streets.forEach(s => {
-          if (!s.coords?.length) return;
-          const path = s.coords.map(([lat, lng]) => ({ lat, lng }));
-          const line = new window.google.maps.Polyline({
-            path, geodesic: true,
-            strokeColor: colorMap[s.urgency] || colorMap.gray,
-            strokeOpacity: 0.9,
-            strokeWeight: weightMap[s.urgency] || 3,
-            map: mapRef.current,
-          });
-          const infoWindow = new window.google.maps.InfoWindow({
-            content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:4px"><b>${s.street}</b><br/>${s.nextClean || "No restrictions"}</div>`,
-          });
-          line.addListener("click", (e) => {
-            infoWindow.setPosition(e.latLng);
-            infoWindow.open(mapRef.current);
-            if (onStreetClick) onStreetClick(s.street);
-          });
+          if (!s.coords || s.coords.length < 2) return;
+          // Handle both [lat,lng] arrays and {lat,lng} objects
+          const path = s.coords.map(c => Array.isArray(c) ? { lat: c[0], lng: c[1] } : c);
+          try {
+            const line = new window.google.maps.Polyline({
+              path,
+              geodesic: true,
+              strokeColor: colorMap[s.urgency] || colorMap.gray,
+              strokeOpacity: s.urgency === "gray" ? 0.5 : 0.9,
+              strokeWeight: weightMap[s.urgency] || 3,
+              map: mapRef.current,
+              zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
+            });
+            const infoWindow = new window.google.maps.InfoWindow({
+              content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:4px"><b>${s.street}</b><br/>${s.nextClean || "No restrictions"}</div>`,
+            });
+            line.addListener("click", (e) => {
+              infoWindow.setPosition(e.latLng);
+              infoWindow.open(mapRef.current);
+              if (onStreetClick) onStreetClick(s.street);
+            });
+            drawn++;
+          } catch(e) { console.error("Polyline error:", e.message); }
         });
+        console.log(`Drew ${drawn}/${streets.length} polylines`);
       };
 
-      // Draw streets as soon as data arrives — don't wait for tilesloaded
+      // Draw streets as soon as data arrives
       heatmapPromise.then(streets => {
         setStatus("ready");
-        drawStreets(streets);
+        if (streets && streets.length > 0) {
+          // If map tiles loaded already, draw now; otherwise wait
+          if (mapRef.current) {
+            drawStreets(streets);
+          } else {
+            google.maps.event.addListenerOnce(map, "tilesloaded", () => drawStreets(streets));
+          }
+        }
       });
 
-      // Also hook tilesloaded as backup in case data arrives first
       google.maps.event.addListenerOnce(map, "tilesloaded", () => {
         setStatus("ready");
       });
