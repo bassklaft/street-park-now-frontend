@@ -922,7 +922,7 @@ function DraggableCarousel() {
   const animRef = useRef(null);
   const pausedRef = useRef(false);
   const momentumRef = useRef(0);
-  const SPEED = 0.4;
+  const SPEED = 0.6;
 
   useEffect(() => {
     const track = trackRef.current;
