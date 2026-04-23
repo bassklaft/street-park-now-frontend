@@ -197,17 +197,17 @@ const fmtKm = km => km < 1 ? `${Math.round(km*1000)}m away` : `${km.toFixed(1)}k
 // ─── MAP ──────────────────────────────────────────────────────────────────────
 function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGPS = false }) {
   const ref = useRef(null);
-  const mapRef = useRef(null);
 
   useEffect(() => {
     if (!ref.current) return;
     let alive = true;
+    const cLat = destLat || userLat;
+    const cLng = destLng || userLng;
+    if (!cLat || !cLng) return;
 
     const initMap = () => {
       if (!alive || !ref.current || !window.google?.maps) return;
-      const cLat = destLat || userLat;
-      const cLng = destLng || userLng;
-      if (!cLat || !cLng) return;
+
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: cLat, lng: cLng },
         zoom: 14,
@@ -228,25 +228,20 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
         ],
       });
 
-      // Red destination pin — only for non-GPS searches
       if (!isGPS) {
         new window.google.maps.Marker({
-          position: { lat: destLat, lng: destLng },
-          map,
+          position: { lat: destLat, lng: destLng }, map,
           icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 10, fillColor:"#3182CE", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
           title: label,
         });
       }
 
-      // Blue user pin
       if (userLat && userLng) {
         new window.google.maps.Marker({
-          position: { lat: userLat, lng: userLng },
-          map,
+          position: { lat: userLat, lng: userLng }, map,
           icon: { path: window.google.maps.SymbolPath.CIRCLE, scale: 8, fillColor:"#3182CE", fillOpacity:1, strokeColor:"#fff", strokeWeight:2 },
           title: "You",
         });
-        // Only draw line and fitBounds if user and dest are meaningfully different
         const dist = Math.abs(userLat - destLat) + Math.abs(userLng - destLng);
         if (!isGPS && dist > 0.001) {
           new window.google.maps.Polyline({
@@ -262,38 +257,29 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
         }
       }
 
-      mapRef.current = map;
-
-      // Draw heatmap polylines on this map if data is available
-      const drawHeatOnParkMap = (data) => {
-        if (!data || !data.length) return;
-        const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#888888" };
-        const weights = { red:6, yellow:5, green:4, gray:3 };
-        data.forEach(s => {
-          if (!s.coords || s.coords.length < 2) return;
-          const path = s.coords.map(c => Array.isArray(c) ? {lat:c[0],lng:c[1]} : c);
-          new window.google.maps.Polyline({
-            path, map, geodesic: true,
-            strokeColor: colors[s.urgency] || "#888888",
-            strokeOpacity: 0.9,
-            strokeWeight: weights[s.urgency] || 3,
-            zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
+      // Fetch and draw heatmap polylines directly - no shared state
+      const lat = userLat || destLat;
+      const lng = userLng || destLng;
+      fetch(`${API}/api/heatmap?lat=${lat}&lng=${lng}`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          if (!alive || !data.length) return;
+          console.log("Drawing", data.length, "polylines on ParkMap");
+          const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#888888" };
+          const weights = { red:6, yellow:5, green:4, gray:3 };
+          data.forEach(s => {
+            if (!s.coords || s.coords.length < 2) return;
+            const path = s.coords.map(c => Array.isArray(c) ? {lat:c[0],lng:c[1]} : c);
+            new window.google.maps.Polyline({
+              path, map, geodesic: true,
+              strokeColor: colors[s.urgency] || "#888888",
+              strokeOpacity: 0.9,
+              strokeWeight: weights[s.urgency] || 3,
+              zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
+            });
           });
-        });
-        console.log("ParkMap drew", data.length, "heatmap polylines");
-      };
-
-      // Draw now if data ready, otherwise wait for prefetch
-      if (_heatmap.data.length) {
-        drawHeatOnParkMap(_heatmap.data);
-      } else {
-        // Poll every second until data arrives (max 30s)
-        let tries = 0;
-        const poll = setInterval(() => {
-          if (_heatmap.data.length) { clearInterval(poll); drawHeatOnParkMap(_heatmap.data); }
-          if (++tries > 30) clearInterval(poll);
-        }, 1000);
-      }
+        })
+        .catch(e => console.error("Heatmap fetch error:", e));
     };
 
     if (window.google?.maps) { initMap(); return; }
