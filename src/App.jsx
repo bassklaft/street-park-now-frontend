@@ -210,7 +210,7 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
       if (!cLat || !cLng) return;
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: cLat, lng: cLng },
-        zoom: userLat ? 14 : 15,
+        zoom: userLat ? 13 : 15,
         mapTypeId: "roadmap",
         zoomControl: true,
         streetViewControl: false,
@@ -656,11 +656,11 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .estab-meta{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin-top:2px}
 .estab-street{font-family:var(--mono);font-size:.82rem;color:var(--yellow);margin-top:3px}
 .estab-hint{font-family:var(--mono);font-size:.78rem;color:#444;margin-top:4px}
-.wx-row{display:flex;gap:2px;flex-wrap:wrap}
-.wx-day{background:var(--g2);padding:13px 15px;flex:1;min-width:90px}
-.wx-date{font-family:var(--mono);font-size:.76rem;color:var(--muted);margin-bottom:5px}
-.wx-icon{font-size:1.5rem;margin-bottom:3px}
-.wx-lbl{font-family:var(--mono);font-size:.85rem;color:#888;margin-bottom:3px}
+.wx-row{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto}
+.wx-day{background:var(--g2);padding:10px 12px;flex:1;min-width:70px;text-align:center}
+.wx-date{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-bottom:4px}
+.wx-icon{font-size:1.3rem;margin-bottom:2px}
+.wx-lbl{font-family:var(--mono);font-size:.78rem;color:#888;margin-bottom:2px}
 .wx-precip{font-family:var(--mono);font-size:.82rem;color:var(--yellow)}
 .signup{background:linear-gradient(135deg,#141000,#0c0c0c);border:2px solid var(--yellow);padding:22px 20px;margin-top:8px}
 .signup-title{font-family:var(--display);font-size:1.7rem;letter-spacing:.04em;margin-bottom:3px}
@@ -773,7 +773,7 @@ inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end
 @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-@media(max-width:520px){.cards{grid-template-columns:1fr 1fr}.prices{flex-direction:column}.wx-row{flex-direction:column}}
+@media(max-width:520px){.cards{grid-template-columns:1fr 1fr}.prices{flex-direction:column}}
 `;
 
 // ─── DRAGGABLE CAROUSEL ───────────────────────────────────────────────────────
@@ -998,6 +998,8 @@ export default function App() {
     setPhase("loading");
     const saved = Storage.saveSearch(loc);
     if (saved) setSavedSearches(saved);
+    // Save last search for paid users auto-reload
+    if (Auth.isPaid()) localStorage.setItem("spn_last_loc", JSON.stringify(loc));
     const streets = 
       loc.isPark && loc.parkStreets?.length ? loc.parkStreets : 
       (loc.isZip || loc.isNeighborhood) && loc.zipStreets?.length ? loc.zipStreets :
@@ -1021,6 +1023,8 @@ export default function App() {
     setEvents(evR.status === "fulfilled" ? evR.value : []);
     setWeather(wxR.status === "fulfilled" ? wxR.value : null);
     setAsp(aR.status === "fulfilled" ? aR.value : null);
+    setSearchFocused(false);
+    setQuery("");
     setPhase("dash");
   }, [loadCleaningForStreets]);
 
@@ -1143,13 +1147,28 @@ export default function App() {
   // Check location permission on load — auto-search for paid users
   useEffect(() => {
     if (!navigator.geolocation) return;
+
+    // For paid users, restore last search immediately
+    if (Auth.isPaid()) {
+      const lastLoc = localStorage.getItem("spn_last_loc");
+      if (lastLoc) {
+        try {
+          const loc = JSON.parse(lastLoc);
+          if (loc.lat && loc.lng) {
+            setHomeMapCoords({ lat: loc.lat, lng: loc.lng });
+            loadAll(loc);
+            return;
+          }
+        } catch(e) {}
+      }
+    }
+
     navigator.permissions?.query({ name: "geolocation" }).then(perm => {
       if (perm.state === "granted") {
         setLocationAllowed(true);
         navigator.geolocation.getCurrentPosition(
           ({ coords: { latitude: lat, longitude: lng } }) => {
             setHomeMapCoords({ lat, lng });
-            // Auto-search for paid users on reload
             if (Auth.isPaid()) {
               setCoords({ lat, lng });
               reverseGeocode(lat, lng)
@@ -1495,7 +1514,7 @@ export default function App() {
                 value={query}
                 onChange={setQuery}
                 onPlaceSelect={handlePlaceSelect}
-                onFocus={handleSearchFocus}
+                onFocus={() => setSearchFocused(true)}
                 onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
                 onEnter={handleSearch}
                 onGPSClick={handleGPS}
