@@ -297,29 +297,28 @@ const COVERED_CITIES = [
   { name: "Toronto", lat: 43.6532, lng: -79.3832 },
 ];
 
-function CoverageMap() {
+function CoverageMap({ onCityClick }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!ref.current) return;
     const loadMap = () => {
       if (!window.google?.maps) return;
       const map = new window.google.maps.Map(ref.current, {
-        center: { lat: 44, lng: -95 },
+        center: { lat: 48, lng: -95 },
         zoom: 3,
         mapTypeId: "roadmap",
         disableDefaultUI: true,
         gestureHandling: "cooperative",
         styles: [
-          { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#555" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a1a" }] },
-          { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#444" }] },
-          { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#ffffff", weight: 1.5, lightness: 20 }] },
+          { elementType: "geometry", stylers: [{ color: "#111111" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#444444" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#111111" }] },
+          { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#555555" }] },
+          { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#333333" }] },
           { featureType: "road", stylers: [{ visibility: "off" }] },
           { featureType: "poi", stylers: [{ visibility: "off" }] },
           { featureType: "transit", stylers: [{ visibility: "off" }] },
           { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
-          { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#111111" }] },
         ],
       });
       COVERED_CITIES.forEach(city => {
@@ -328,18 +327,21 @@ function CoverageMap() {
           map,
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#F7C948",
+            scale: 7,
+            fillColor: "#38A169",
             fillOpacity: 1,
             strokeColor: "#ffffff",
-            strokeWeight: 2,
+            strokeWeight: 1.5,
           },
           title: city.name,
         });
         const info = new window.google.maps.InfoWindow({
-          content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:2px 4px"><b>${city.name}</b></div>`
+          content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:2px 6px;cursor:pointer"><b>${city.name}</b><br><span style="color:#666">Tap to search</span></div>`
         });
-        marker.addListener("click", () => info.open(map, marker));
+        marker.addListener("click", () => {
+          info.open(map, marker);
+          if (onCityClick) onCityClick(city);
+        });
       });
     };
     if (window.google?.maps) { loadMap(); return; }
@@ -349,10 +351,10 @@ function CoverageMap() {
   return (
     <div style={{position:"relative"}}>
       <div ref={ref} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111"}} />
-      <div style={{display:"flex",gap:12,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{display:"flex",gap:12,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:10,height:10,borderRadius:"50%",background:"#F7C948",border:"2px solid #fff"}} />
-          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>Covered city · tap to see name</span>
+          <div style={{width:10,height:10,borderRadius:"50%",background:"#38A169",border:"1.5px solid #fff"}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>Covered city · tap to search</span>
         </div>
       </div>
     </div>
@@ -1270,17 +1272,9 @@ export default function App() {
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              {homeMapCoords ? "TAP THE LIVE PARKING HEAT MAP 🔥🗺 · OR SEARCH BAR" : "🗺 CITIES WE COVER · ALLOW LOCATION FOR LIVE HEAT MAP"}
+              🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR
             </div>
-            {homeMapCoords ? (
-              <HeatMap
-                userLat={homeMapCoords.lat}
-                userLng={homeMapCoords.lng}
-                onStreetClick={(street) => { setQuery(street); handleSearch(); }}
-              />
-            ) : (
-              <CoverageMap />
-            )}
+            <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
           </div>
 
           {/* SCROLLING STATS CAROUSEL */}
@@ -1324,7 +1318,7 @@ export default function App() {
 
       {/* LOADING */}
       {phase === "loading" && (
-        <div className="loading"><div className="spin" /><div className="loading-lbl" style={{textAlign:"center"}}>SEARCHING YOUR CITY'S DATABASE…</div></div>
+        <div className="loading"><div className="spin" /><div className="loading-lbl" style={{textAlign:"center"}}>SCANNING YOUR CITY'S DATABASES…</div></div>
       )}
 
       {/* FAQ PAGE */}
