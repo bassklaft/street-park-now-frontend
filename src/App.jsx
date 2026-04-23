@@ -279,6 +279,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
   const mapRef = useRef(null);
   const [status, setStatus] = useState("loading");
   const [streets, setStreets] = useState([]);
+  const [mapReady, setMapReady] = useState(false);
 
   // Fetch heatmap data
   useEffect(() => {
@@ -329,6 +330,11 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
       });
 
       mapRef.current = map;
+      google.maps.event.addListenerOnce(map, "tilesloaded", () => {
+        if (alive) setMapReady(true);
+      });
+      // Fallback in case tilesloaded doesn't fire
+      setTimeout(() => { if (alive) setMapReady(true); }, 3000);
     };
 
     const loadGoogleMaps = () => {
@@ -350,9 +356,9 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
     return () => { alive = false; clearTimeout(timer); };
   }, [userLat, userLng]);
 
-  // Draw polylines whenever streets OR map changes
+  // Draw polylines — runs when BOTH map is ready AND streets are loaded
   useEffect(() => {
-    if (!mapRef.current || !streets.length || !window.google?.maps) return;
+    if (!mapReady || !streets.length || !mapRef.current || !window.google?.maps) return;
     const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
     const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
     streets.forEach(s => {
@@ -361,7 +367,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
       const line = new window.google.maps.Polyline({
         path, geodesic: true,
         strokeColor: colorMap[s.urgency] || colorMap.gray,
-        strokeOpacity: s.urgency === "gray" ? 0.6 : 0.9,
+        strokeOpacity: s.urgency === "gray" ? 0.7 : 0.9,
         strokeWeight: weightMap[s.urgency] || 3,
         map: mapRef.current,
         zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
@@ -375,7 +381,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
         if (onStreetClick) onStreetClick(s.street);
       });
     });
-  }, [streets, mapRef.current]);
+  }, [mapReady, streets]);
 
   return (
     <div style={{position:"relative",marginBottom:16}}>
