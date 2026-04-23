@@ -157,8 +157,12 @@ async function getCleaningBatch(streets, lat, lng, borough) {
     const r = await fetch(`${API}/api/cleaning-batch?${p}`);
     if (!r.ok) return [];
     const data = await r.json();
-    // Convert object to flat array with street labels
-    return streets.flatMap(s => (data[s] || []).map(c => ({ ...c, street: s })));
+    // Include streets with data first, then streets with no known schedule
+    const withData = streets.flatMap(s => (data[s] || []).map(c => ({ ...c, street: s })));
+    const noData = streets
+      .filter(s => !data[s] || data[s].length === 0)
+      .map(s => ({ street: s, days: [], time: "", raw: "No alternate side parking regulations found", upcomingDates: [] }));
+    return [...withData, ...noData];
   } catch { return []; }
 }
 async function getFilms(street, borough, lat, lng) {
@@ -600,7 +604,7 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 /* CAROUSEL */
 .carousel-section{width:100%;padding:24px 0;border-bottom:1px solid #1f1f1f;overflow:hidden}
 .carousel-label{font-family:var(--mono);font-size:.72rem;color:var(--yellow);letter-spacing:.08em;text-transform:uppercase;text-align:center;margin-bottom:14px;white-space:nowrap;overflow:hidden}
-.carousel-track{display:flex;gap:12px;width:max-content;padding:0 12px;cursor:grab;user-select:none;will-change:transform}
+.carousel-track{display:flex;gap:12px;width:max-content;padding:0 12px;cursor:grab;user-select:none}
 .carousel-track.dragging{cursor:grabbing}
 .carousel-card{background:var(--g2);border:1px solid #2a2a2a;border-radius:8px;padding:20px 24px;min-width:240px;flex-shrink:0}
 .carousel-card-city{font-family:var(--mono);font-size:.9rem;color:var(--white);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
@@ -1696,6 +1700,7 @@ export default function App() {
                     <div className="wx-row">
                       {(wxDaily?.time || []).slice(0,3).map((ds, i) => {
                         const code = wxDaily.weather_code?.[i], rain = wxDaily.precipitation_sum?.[i], snow = wxDaily.snowfall_sum?.[i];
+                        if (ds === undefined || ds === null) return null;
                         const lbl = i===0?"Today":i===1?"Tomorrow":new Date(ds+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
                         return (
                           <div key={i} className="wx-day">
