@@ -273,6 +273,92 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
   return <div ref={ref} style={{width:"100%", height:"260px", border:"1px solid #2a2a2a"}} />;
 }
 
+// ─── COVERAGE MAP ─────────────────────────────────────────────────────────────
+const COVERED_CITIES = [
+  { name: "New York", lat: 40.7128, lng: -74.0060 },
+  { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
+  { name: "Chicago", lat: 41.8781, lng: -87.6298 },
+  { name: "San Francisco", lat: 37.7749, lng: -122.4194 },
+  { name: "Boston", lat: 42.3601, lng: -71.0589 },
+  { name: "Philadelphia", lat: 39.9526, lng: -75.1652 },
+  { name: "Washington DC", lat: 38.9072, lng: -77.0369 },
+  { name: "Seattle", lat: 47.6062, lng: -122.3321 },
+  { name: "Miami", lat: 25.7617, lng: -80.1918 },
+  { name: "Atlanta", lat: 33.7490, lng: -84.3880 },
+  { name: "Denver", lat: 39.7392, lng: -104.9903 },
+  { name: "Nashville", lat: 36.1627, lng: -86.7816 },
+  { name: "Austin", lat: 30.2672, lng: -97.7431 },
+  { name: "Dallas", lat: 32.7767, lng: -96.7970 },
+  { name: "Portland", lat: 45.5051, lng: -122.6750 },
+  { name: "Minneapolis", lat: 44.9778, lng: -93.2650 },
+  { name: "Sacramento", lat: 38.5816, lng: -121.4944 },
+  { name: "San Diego", lat: 32.7157, lng: -117.1611 },
+  { name: "New Jersey", lat: 40.7282, lng: -74.0776 },
+  { name: "Toronto", lat: 43.6532, lng: -79.3832 },
+];
+
+function CoverageMap() {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const loadMap = () => {
+      if (!window.google?.maps) return;
+      const map = new window.google.maps.Map(ref.current, {
+        center: { lat: 44, lng: -95 },
+        zoom: 3,
+        mapTypeId: "roadmap",
+        disableDefaultUI: true,
+        gestureHandling: "cooperative",
+        styles: [
+          { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#555" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a1a" }] },
+          { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#444" }] },
+          { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#ffffff", weight: 1.5, lightness: 20 }] },
+          { featureType: "road", stylers: [{ visibility: "off" }] },
+          { featureType: "poi", stylers: [{ visibility: "off" }] },
+          { featureType: "transit", stylers: [{ visibility: "off" }] },
+          { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
+          { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#111111" }] },
+        ],
+      });
+      COVERED_CITIES.forEach(city => {
+        const marker = new window.google.maps.Marker({
+          position: { lat: city.lat, lng: city.lng },
+          map,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#F7C948",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+          },
+          title: city.name,
+        });
+        const info = new window.google.maps.InfoWindow({
+          content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:2px 4px"><b>${city.name}</b></div>`
+        });
+        marker.addListener("click", () => info.open(map, marker));
+      });
+    };
+    if (window.google?.maps) { loadMap(); return; }
+    const wait = setInterval(() => { if (window.google?.maps) { clearInterval(wait); loadMap(); } }, 100);
+    return () => clearInterval(wait);
+  }, []);
+  return (
+    <div style={{position:"relative"}}>
+      <div ref={ref} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111"}} />
+      <div style={{display:"flex",gap:12,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{width:10,height:10,borderRadius:"50%",background:"#F7C948",border:"2px solid #fff"}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>Covered city · tap to see name</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── HEAT MAP ────────────────────────────────────────────────────────────────
 function HeatMap({ userLat, userLng, onStreetClick }) {
   const ref = useRef(null);
@@ -614,8 +700,8 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .ambiguous-option-meta{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin-top:2px;}
 .ambiguous-arrow{font-family:var(--mono);font-size:1.5rem;color:var(--muted);}
 inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end;justify-content:center}
-.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:flex-end;justify-content:center}
 .auth-modal{background:var(--g2);border:1px solid var(--yellow);padding:32px 28px;width:100%;max-width:420px;animation:slideUp .25s ease;position:relative}
 .auth-title{font-family:var(--display);font-size:2rem;letter-spacing:.06em;margin-bottom:4px}
 .auth-sub{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin-bottom:24px;letter-spacing:.06em;line-height:1.6}
@@ -1156,19 +1242,21 @@ export default function App() {
             </div>
           </div>
 
-          {/* HEAT MAP — shows once location is known */}
-          {homeMapCoords && (
+          {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              TAP THE LIVE PARKING HEAT MAP 🔥🗺 · OR SEARCH BAR
+              {homeMapCoords ? "TAP THE LIVE PARKING HEAT MAP 🔥🗺 · OR SEARCH BAR" : "🗺 CITIES WE COVER · ALLOW LOCATION FOR LIVE HEAT MAP"}
             </div>
-            <HeatMap
-              userLat={homeMapCoords.lat}
-              userLng={homeMapCoords.lng}
-              onStreetClick={(street) => { setQuery(street); handleSearch(); }}
-            />
+            {homeMapCoords ? (
+              <HeatMap
+                userLat={homeMapCoords.lat}
+                userLng={homeMapCoords.lng}
+                onStreetClick={(street) => { setQuery(street); handleSearch(); }}
+              />
+            ) : (
+              <CoverageMap />
+            )}
           </div>
-          )}
 
           {/* SCROLLING STATS CAROUSEL */}
           <div className="carousel-section">
