@@ -314,19 +314,32 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
 
 // ─── COVERAGE MAP ─────────────────────────────────────────────────────────────
 const COVERED_CITIES = [
-  // NYC neighborhoods
+  // NYC - Brooklyn
   { name: "Williamsburg", lat: 40.7081, lng: -73.9571 },
   { name: "Bushwick", lat: 40.6944, lng: -73.9213 },
   { name: "Park Slope", lat: 40.6681, lng: -73.9800 },
   { name: "Crown Heights", lat: 40.6694, lng: -73.9448 },
-  { name: "Astoria", lat: 40.7721, lng: -73.9302 },
-  { name: "Flushing", lat: 40.7675, lng: -73.8330 },
-  { name: "Harlem", lat: 40.8116, lng: -73.9465 },
-  { name: "Upper West Side", lat: 40.7870, lng: -73.9754 },
-  { name: "Chelsea", lat: 40.7465, lng: -74.0014 },
-  { name: "East Village", lat: 40.7265, lng: -73.9815 },
   { name: "Greenpoint", lat: 40.7292, lng: -73.9543 },
   { name: "Sunset Park", lat: 40.6457, lng: -74.0051 },
+  { name: "Flatbush", lat: 40.6501, lng: -73.9496 },
+  { name: "Bay Ridge", lat: 40.6348, lng: -74.0215 },
+  // NYC - Manhattan
+  { name: "Harlem", lat: 40.8116, lng: -73.9465 },
+  { name: "Upper West Side", lat: 40.7870, lng: -73.9754 },
+  { name: "Upper East Side", lat: 40.7736, lng: -73.9566 },
+  { name: "Midtown Manhattan", lat: 40.7549, lng: -73.9840 },
+  { name: "Chelsea", lat: 40.7465, lng: -74.0014 },
+  { name: "East Village", lat: 40.7265, lng: -73.9815 },
+  { name: "West Village", lat: 40.7338, lng: -74.0059 },
+  { name: "Lower East Side", lat: 40.7157, lng: -73.9863 },
+  { name: "Inwood", lat: 40.8674, lng: -73.9212 },
+  // NYC - Queens
+  { name: "Astoria", lat: 40.7721, lng: -73.9302 },
+  { name: "Flushing", lat: 40.7675, lng: -73.8330 },
+  { name: "Long Island City", lat: 40.7448, lng: -73.9483 },
+  { name: "Jackson Heights", lat: 40.7557, lng: -73.8831 },
+  { name: "Ridgewood", lat: 40.7016, lng: -73.9066 },
+  // NYC - Other boroughs
   { name: "The Bronx", lat: 40.8448, lng: -73.8648 },
   { name: "Staten Island", lat: 40.5795, lng: -74.1502 },
   { name: "Hoboken", lat: 40.7440, lng: -74.0324 },
@@ -433,7 +446,7 @@ function CoverageMap({ onCityClick }) {
         })
         .catch(() => console.log("GeoJSON failed to load"));
 
-      // Add city markers on top
+      // Add neighborhood markers with labels
       COVERED_CITIES.forEach(city => {
         const marker = new window.google.maps.Marker({
           position: { lat: city.lat, lng: city.lng },
@@ -443,8 +456,15 @@ function CoverageMap({ onCityClick }) {
             scale: 5,
             fillColor: "#F7C948",
             fillOpacity: 1,
-            strokeColor: "#ffffff",
+            strokeColor: "#080808",
             strokeWeight: 1,
+          },
+          label: {
+            text: city.name,
+            color: "#F7C948",
+            fontFamily: "monospace",
+            fontSize: "8px",
+            fontWeight: "500",
           },
           title: city.name,
         });
@@ -909,7 +929,7 @@ function DraggableCarousel() {
   const animRef = useRef(null);
   const pausedRef = useRef(false);
   const momentumRef = useRef(0);
-  const SPEED = 0.8;
+  const SPEED = 0.4;
 
   useEffect(() => {
     const track = trackRef.current;
