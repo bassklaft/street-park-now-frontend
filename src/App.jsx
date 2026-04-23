@@ -1147,13 +1147,7 @@ export default function App() {
         navigator.geolocation.getCurrentPosition(
           ({ coords: { latitude: lat, longitude: lng } }) => {
             setHomeMapCoords({ lat, lng });
-            prefetchHeatmap(lat, lng); // start fetching immediately
-            if (Auth.isPaid()) {
-              setCoords({ lat, lng });
-              reverseGeocode(lat, lng)
-                .then(loc => loadAll({ ...loc, lat, lng }))
-                .catch(() => {});
-            }
+            prefetchHeatmap(lat, lng); // prefetch heatmap data but don't navigate
           },
           () => {}
         );
@@ -1165,13 +1159,7 @@ export default function App() {
         ({ coords: { latitude: lat, longitude: lng } }) => {
           setLocationAllowed(true);
           setHomeMapCoords({ lat, lng });
-          prefetchHeatmap(lat, lng); // start fetching immediately
-          if (Auth.isPaid()) {
-            setCoords({ lat, lng });
-            reverseGeocode(lat, lng)
-              .then(loc => loadAll({ ...loc, lat, lng }))
-              .catch(() => {});
-          }
+          prefetchHeatmap(lat, lng);
         },
         () => { setLocationAllowed(false); }
       );
