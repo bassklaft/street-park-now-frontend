@@ -993,7 +993,7 @@ function DraggableCarousel() {
 }
 
 // ─── SAVED LOCATIONS PAGE ────────────────────────────────────────────────────
-function SavedLocationsPage({ onDone }) {
+function SavedLocationsPage({ onDone, onSelectLocation }) {
   const [list, setList] = useState([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -1090,15 +1090,25 @@ function SavedLocationsPage({ onDone }) {
       ) : (
         <div>
           {list.map(item => (
-            <label key={item.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 0",borderBottom:"1px solid #1f1f1f",cursor:"pointer",opacity:busyId===item.id?0.4:1}}>
+            <div key={item.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 0",borderBottom:"1px solid #1f1f1f",opacity:busyId===item.id?0.4:1}}>
               <input
                 type="checkbox"
                 checked={true}
                 disabled={busyId===item.id}
                 onChange={() => removeLocation(item.id)}
+                aria-label={`Remove ${item.label}`}
                 style={{width:20,height:20,accentColor:"var(--yellow)",cursor:"pointer",flexShrink:0}}
               />
-              <div style={{flex:1,minWidth:0}}>
+              <button
+                onClick={() => onSelectLocation && onSelectLocation(item)}
+                disabled={busyId===item.id}
+                style={{
+                  flex:1,minWidth:0,textAlign:"left",
+                  background:"none",border:"none",padding:0,
+                  cursor:"pointer",color:"inherit",
+                  fontFamily:"inherit",letterSpacing:"inherit",
+                }}
+              >
                 <div style={{fontFamily:"var(--body)",fontSize:"1.05rem",color:"var(--white)",letterSpacing:".02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {item.label}
                 </div>
@@ -1107,8 +1117,8 @@ function SavedLocationsPage({ onDone }) {
                     {[item.neighborhood, item.borough, item.city].filter(Boolean).join(" · ")}
                   </div>
                 )}
-              </div>
-            </label>
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -1777,7 +1787,15 @@ export default function App() {
 
       {/* SAVED LOCATIONS PAGE */}
       {phase === "saved" && user?.tier === "unlimited" && (
-        <SavedLocationsPage onDone={resetHome} />
+        <SavedLocationsPage
+          onDone={resetHome}
+          onSelectLocation={(item) => handlePlaceSelect({
+            lat: item.lat,
+            lng: item.lng,
+            label: item.label,
+            formatted: item.label,
+          })}
+        />
       )}
 
       {/* ACCOUNT PAGE */}
