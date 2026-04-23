@@ -363,36 +363,38 @@ function CoverageMap() {
 function HeatMap({ userLat, userLng, onStreetClick }) {
   const ref = useRef(null);
   const mapRef = useRef(null);
+  const heatmapDataRef = useRef(Promise.resolve([]));
   const [status, setStatus] = useState("loading");
   const [streets, setStreets] = useState([]);
   const [mapReady, setMapReady] = useState(false);
 
-  // Fetch heatmap data
+  // Fetch heatmap data and store promise in ref
   useEffect(() => {
     if (!userLat || !userLng) return;
-    fetch(`${API}/api/heatmap?lat=${userLat}&lng=${userLng}`)
+    const promise = fetch(`${API}/api/heatmap?lat=${userLat}&lng=${userLng}`)
       .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        setStreets(data);
-        setStatus("ready");
-        // If map already ready, draw immediately
-        if (mapRef.current && window.google?.maps && data.length > 0) {
-          const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
-          const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
-          data.forEach(s => {
-            if (!s.coords || s.coords.length < 2) return;
-            const path = s.coords.map(c => Array.isArray(c) ? { lat: c[0], lng: c[1] } : c);
-            new window.google.maps.Polyline({
-              path, geodesic: true,
-              strokeColor: colorMap[s.urgency] || colorMap.gray,
-              strokeOpacity: s.urgency === "gray" ? 0.7 : 0.9,
-              strokeWeight: weightMap[s.urgency] || 3,
-              map: mapRef.current,
-            });
+      .catch(() => []);
+    heatmapDataRef.current = promise;
+    promise.then(data => {
+      setStreets(data);
+      setStatus("ready");
+      // If map already ready, draw immediately
+      if (mapRef.current && window.google?.maps && data.length > 0) {
+        const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
+        const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
+        data.forEach(s => {
+          if (!s.coords || s.coords.length < 2) return;
+          const path = s.coords.map(c => Array.isArray(c) ? { lat: c[0], lng: c[1] } : c);
+          new window.google.maps.Polyline({
+            path, geodesic: true,
+            strokeColor: colorMap[s.urgency] || colorMap.gray,
+            strokeOpacity: s.urgency === "gray" ? 0.7 : 0.9,
+            strokeWeight: weightMap[s.urgency] || 3,
+            map: mapRef.current,
           });
-        }
-      })
-      .catch(() => setStatus("ready"));
+        });
+      }
+    });
   }, [userLat, userLng]);
 
   // Init map
@@ -405,7 +407,7 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
 
       const map = new window.google.maps.Map(ref.current, {
         center: { lat: userLat, lng: userLng },
-        zoom: 16,
+        zoom: 15,
         mapTypeId: "roadmap",
         disableDefaultUI: false,
         zoomControl: true,
@@ -435,11 +437,34 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
       });
 
       mapRef.current = map;
-      google.maps.event.addListenerOnce(map, "tilesloaded", () => {
-        if (alive) setMapReady(true);
-      });
-      // Guaranteed fallback — always draw after 2 seconds regardless
-      setTimeout(() => { if (alive && mapRef.current) setMapReady(true); }, 2000);
+
+      // Draw polylines on idle — fires after tiles load, most reliable
+      let drawn = false;
+      const drawOnIdle = () => {
+        if (drawn) return;
+        heatmapDataRef.current.then(streets => {
+          if (!streets.length || !mapRef.current) return;
+          drawn = true;
+          const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
+          const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
+          streets.forEach(s => {
+            if (!s.coords || s.coords.length < 2) return;
+            const path = s.coords.map(c => Array.isArray(c) ? { lat: c[0], lng: c[1] } : c);
+            new window.google.maps.Polyline({
+              path, geodesic: true,
+              strokeColor: colorMap[s.urgency] || colorMap.gray,
+              strokeOpacity: s.urgency === "gray" ? 0.7 : 0.9,
+              strokeWeight: weightMap[s.urgency] || 3,
+              map: mapRef.current,
+            });
+          });
+          setStatus("ready");
+          setStreets(streets);
+        });
+      };
+      google.maps.event.addListenerOnce(map, "idle", drawOnIdle);
+      // Also try after 5 seconds in case idle already fired
+      setTimeout(drawOnIdle, 5000);
     };
 
     const loadGoogleMaps = () => {
@@ -1120,7 +1145,7 @@ export default function App() {
           ({ coords: { latitude: lat, longitude: lng } }) => {
             setHomeMapCoords({ lat, lng });
           },
-          () => setHomeMapCoords({ lat: 40.7580, lng: -73.9855 })
+          () => {} // don't default to Midtown if geolocation fails
         );
       } else if (perm.state === "denied") {
         setLocationAllowed(false);
