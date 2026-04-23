@@ -1376,7 +1376,7 @@ export default function App() {
 
           {/* SMS Signup */}
           <div className="signup" style={{maxWidth:536,margin:"0 16px 12px"}}>
-            <div className="signup-title">GET TEXTED BEFORE IT MATTERS</div>
+            <div className="signup-title">GET A TEXT BEFORE IT MATTERS</div>
             <div className="signup-sub">Street cleaning · Film shoots · Snowstorms · Events</div>
             <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
             <button className="p-cta" onClick={() => handleCheckout("unlimited-monthly")} style={{width:"100%"}} disabled={!!checkoutBusy}>
@@ -1390,7 +1390,7 @@ export default function App() {
             <div className="move-car-sub">
               Can't move your car in time? We'll send a trusted driver.<br/>
               Smart key access only · Insured, background-checked drivers.
-              <span style={{color:"#aaaaff",marginTop:6,display:"block",cursor:"pointer"}}>Join the waitlist →</span>
+              <span style={{color:"#aaaaff",marginTop:6,display:"block",cursor:"pointer"}} onClick={() => window.open("mailto:bassklaft@gmail.com?subject=Street Park Now - Move My Car Waitlist", "_blank")}>Join the waitlist →</span>
             </div>
           </div>
 
@@ -1399,7 +1399,7 @@ export default function App() {
 
       {/* Hidden HeatMap — always mounted when we have coords so data prefetches even if user skips home */}
       {homeMapCoords && phase !== "home" && (
-        <div style={{display:"none"}}>
+        <div style={{position:"fixed",top:"-9999px",left:"-9999px",width:"300px",height:"300px",visibility:"hidden"}}>
           <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} />
         </div>
       )}
