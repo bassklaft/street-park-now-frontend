@@ -394,8 +394,8 @@ function CoverageMap({ onCityClick }) {
     const loadMap = () => {
       if (!window.google?.maps) return;
       const map = new window.google.maps.Map(ref.current, {
-        center: { lat: 39, lng: -96 },
-        zoom: 4,
+        center: { lat: 38, lng: -96 },
+        zoom: 3,
         mapTypeId: "roadmap",
         disableDefaultUI: true,
         gestureHandling: "cooperative",
