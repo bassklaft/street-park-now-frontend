@@ -969,7 +969,7 @@ export default function App() {
     return res.flatMap((r, i) => r.map(c => ({ ...c, street: streets[i] })));
   }, []);
 
-  const loadAll = useCallback(async (loc) => {
+  const loadAll = useCallback(async (loc, isRefresh = false) => {
     setLocData(loc);
     setCoords({ lat: loc.lat, lng: loc.lng });
     setSelectedEstab(null);
@@ -1274,9 +1274,17 @@ export default function App() {
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR
+              {homeMapCoords ? "🔥 LIVE PARKING HEAT MAP · TAP A STREET TO SEARCH" : "🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR"}
             </div>
-            <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
+            {homeMapCoords ? (
+              <HeatMap
+                userLat={homeMapCoords.lat}
+                userLng={homeMapCoords.lng}
+                onStreetClick={(street) => { setQuery(street); handleSearch(); }}
+              />
+            ) : (
+              <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
+            )}
           </div>
 
           {/* SCROLLING STATS CAROUSEL */}
@@ -1305,27 +1313,68 @@ export default function App() {
           </div>
 
           {/* Pricing */}
-          <div className="prices" style={{padding:"0 24px",maxWidth:560}}>
-            {[
-              {key:"monthly",name:"Monthly",price:"$2.99",per:"/month",features:["SMS alerts","1 address","Film & event alerts","ASP alerts"]},
-              {key:"annual",name:"Annual · Best Value",price:"$19",per:"/year · save 47%",features:["SMS alerts","3 addresses","Film & event alerts","Priority weather"],feat:true},
-            ].map(p => (
-              <div key={p.key} className={`price ${p.feat ? "feat" : ""}`}>
-                <div className="p-name">{p.name}</div>
-                <div className="p-num">{p.price}</div>
-                <div className="p-per">{p.per}</div>
-                {p.features.map(f => <div key={f} className="p-feat">{f}</div>)}
-                <button className="p-cta" disabled={!!checkoutBusy} onClick={() => handleCheckout(p.key)}>{checkoutBusy===p.key?"LOADING…":"START FREE TRIAL →"}</button>
-              </div>
-            ))}
+          <div style={{padding:"0 16px",maxWidth:560,width:"100%"}}>
+            <div className="paywall-title" style={{marginBottom:4,padding:"0 4px"}}>CHOOSE YOUR PLAN</div>
+            <div className="paywall-sub" style={{marginBottom:16,padding:"0 4px"}}>All plans include the live parking heat map, street cleaning schedules, film permits, events & weather.</div>
+
+            {/* Feature comparison table */}
+            <div style={{overflowX:"auto",marginBottom:16,background:"#141414",border:"1px solid #2a2a2a",borderRadius:4}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"var(--mono)",fontSize:".62rem"}}>
+                <thead>
+                  <tr style={{background:"#1a1a1a"}}>
+                    <th style={{textAlign:"left",padding:"12px 12px 12px 14px",color:"var(--white)",fontWeight:600,borderBottom:"1px solid #2a2a2a"}}>Feature</th>
+                    <th style={{padding:"12px 8px",color:"var(--white)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Basic</th>
+                    <th style={{padding:"12px 8px",color:"#aaaaff",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Premium</th>
+                    <th style={{padding:"12px 8px",color:"var(--yellow)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Unlimited<br/>+Save</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Searches","999/period","Unlimited","Unlimited"],
+                    ["Live Heat Map","✓","✓","✓"],
+                    ["Street Cleaning","✓","✓","✓"],
+                    ["Film Permits","✓","✓","✓"],
+                    ["Events & Weather","✓","✓","✓"],
+                    ["Recent 2 on Map","✓","✓","✓"],
+                    ["Saved Locations","✗","✗","Up to 10"],
+                    ["One-Tap Rerun","✗","✗","✓"],
+                  ].map(([feat,b,p,u],ri) => (
+                    <tr key={feat} style={{background:ri%2===0?"#141414":"#121212"}}>
+                      <td style={{padding:"11px 12px 11px 14px",color:"var(--white)",borderBottom:"1px solid #1f1f1f",fontWeight:500}}>{feat}</td>
+                      <td style={{padding:"11px 8px",textAlign:"center",borderBottom:"1px solid #1f1f1f",color:b==="✓"?"#38A169":b==="✗"?"#E53E3E":"var(--white)",fontWeight:b==="✓"||b==="✗"?"700":"400",fontSize:b==="✓"||b==="✗"?"1rem":".62rem"}}>{b}</td>
+                      <td style={{padding:"11px 8px",textAlign:"center",borderBottom:"1px solid #1f1f1f",color:p==="✓"?"#38A169":p==="✗"?"#E53E3E":"#aaaaff",fontWeight:p==="✓"||p==="✗"?"700":"400",fontSize:p==="✓"||p==="✗"?"1rem":".62rem"}}>{p}</td>
+                      <td style={{padding:"11px 8px",textAlign:"center",borderBottom:"1px solid #1f1f1f",color:u==="✓"?"#38A169":u==="✗"?"#E53E3E":u.includes("Up")?"#38A169":"var(--yellow)",fontWeight:u==="✓"||u==="✗"?"700":"400",fontSize:u==="✓"||u==="✗"?"1rem":".62rem"}}>{u}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pricing cards */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
+              {[
+                {tier:"Basic",color:"var(--white)",monthly:"$4.20/mo",annual:"$45/yr",monthlyKey:"basic-monthly",annualKey:"basic-annual",save:"Save 11%"},
+                {tier:"Premium",color:"#aaaaff",monthly:"$5.79/mo",annual:"$58.99/yr",monthlyKey:"premium-monthly",annualKey:"premium-annual",save:"Best Value"},
+                {tier:"Unlimited+Save",color:"var(--yellow)",monthly:"$6.49/mo",annual:"$69.99/yr",monthlyKey:"unlimited-monthly",annualKey:"unlimited-annual",save:"Save 10%"},
+              ].map(p => (
+                <div key={p.tier} style={{background:"#141414",border:`1px solid ${p.color}44`,padding:"14px 10px",textAlign:"center"}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:p.color,letterSpacing:".08em",marginBottom:10,fontWeight:700}}>{p.tier}</div>
+                  <button onClick={() => handleCheckout(p.monthlyKey)} style={{width:"100%",background:"transparent",border:`1px solid ${p.color}`,color:p.color,fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",marginBottom:6}}>{p.monthly}</button>
+                  <button onClick={() => handleCheckout(p.annualKey)} style={{width:"100%",background:p.color,border:`1px solid ${p.color}`,color:"#000",fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",fontWeight:700}}>{p.annual}</button>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".5rem",color:"var(--muted)",marginTop:5}}>{p.save}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* SMS Signup */}
-          <div className="signup" style={{maxWidth:536,margin:"0 24px"}}>
+          <div className="signup" style={{maxWidth:536,margin:"0 16px 12px"}}>
             <div className="signup-title">GET TEXTED BEFORE IT MATTERS</div>
             <div className="signup-sub">Street cleaning · Film shoots · Snowstorms · Events</div>
             <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
-            <button className="p-cta" onClick={() => setShowPaywall(true)} style={{width:"100%"}}>UPGRADE TO UNLIMITED+SAVE →</button>
+            <button className="p-cta" onClick={() => handleCheckout("unlimited-monthly")} style={{width:"100%"}} disabled={!!checkoutBusy}>
+              {checkoutBusy==="unlimited-monthly"?"LOADING…":"UPGRADE TO UNLIMITED+SAVE →"}
+            </button>
           </div>
 
           <div className="move-car-banner">
@@ -1338,6 +1387,13 @@ export default function App() {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* Hidden HeatMap — always mounted when we have coords so data prefetches even if user skips home */}
+      {homeMapCoords && phase !== "home" && (
+        <div style={{display:"none"}}>
+          <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} />
         </div>
       )}
 
@@ -1517,7 +1573,7 @@ export default function App() {
               <div className="loc-name">{locData.label || locData.street}</div>
               <div className="loc-meta">{locData.isEstablishment ? `${locData.establishments?.length} locations · sorted by distance` : [locData.neighborhood,locData.borough].filter(Boolean).join(" · ") + " · Updated just now"}</div>
             </div>
-            {!locData.isEstablishment && <button className="re-btn" onClick={() => loadAll(locData)}>↻ REFRESH</button>}
+            {!locData.isEstablishment && <button className="re-btn" onClick={() => loadAll(locData, true)}>↻ REFRESH</button>}
           </div>
 
           {/* Map — show heatmap with polylines when we have GPS coords */}
@@ -1775,11 +1831,46 @@ export default function App() {
             </>
           )}
 
-          {/* Upgrade prompt for non-paid users */}
+          {/* Pricing at bottom of results for non-paid users */}
           {!Auth.isPaid() && (
-            <div style={{padding:"20px",background:"#0a0a0a",borderTop:"1px solid #222",textAlign:"center"}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:8}}>UNLOCK MORE FEATURES</div>
-              <button className="p-cta" style={{maxWidth:280,margin:"0 auto",display:"block"}} onClick={() => setShowPaywall(true)}>UPGRADE TO UNLIMITED+SAVE →</button>
+            <div style={{padding:"20px 16px",borderTop:"1px solid #222"}}>
+              <div className="paywall-title" style={{fontSize:"1.6rem",marginBottom:4}}>UPGRADE YOUR PLAN</div>
+              <div className="paywall-sub" style={{marginBottom:16}}>All plans include heat map, street cleaning, film permits, events & weather.</div>
+              <div style={{overflowX:"auto",marginBottom:12,background:"#141414",border:"1px solid #2a2a2a",borderRadius:4}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"var(--mono)",fontSize:".6rem"}}>
+                  <thead>
+                    <tr style={{background:"#1a1a1a"}}>
+                      <th style={{textAlign:"left",padding:"10px 10px 10px 12px",color:"var(--white)",borderBottom:"1px solid #2a2a2a"}}>Feature</th>
+                      <th style={{padding:"10px 6px",color:"var(--white)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Basic</th>
+                      <th style={{padding:"10px 6px",color:"#aaaaff",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Premium</th>
+                      <th style={{padding:"10px 6px",color:"var(--yellow)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Unlimited<br/>+Save</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[["Searches","999","∞","∞"],["Saved Locations","✗","✗","10"],["One-Tap Rerun","✗","✗","✓"],["SMS Alerts","✗","✗","✓"]].map(([f,b,p,u],ri) => (
+                      <tr key={f} style={{background:ri%2===0?"#141414":"#121212"}}>
+                        <td style={{padding:"9px 10px 9px 12px",color:"var(--white)",borderBottom:"1px solid #1f1f1f"}}>{f}</td>
+                        <td style={{padding:"9px 6px",textAlign:"center",borderBottom:"1px solid #1f1f1f",color:b==="✓"?"#38A169":b==="✗"?"#E53E3E":"var(--white)",fontWeight:b==="✓"||b==="✗"?"700":"400"}}>{b}</td>
+                        <td style={{padding:"9px 6px",textAlign:"center",borderBottom:"1px solid #1f1f1f",color:p==="✓"?"#38A169":p==="✗"?"#E53E3E":"#aaaaff",fontWeight:p==="✓"||p==="✗"?"700":"400"}}>{p}</td>
+                        <td style={{padding:"9px 6px",textAlign:"center",borderBottom:"1px solid #1f1f1f",color:u==="✓"||u==="10"?"#38A169":u==="✗"?"#E53E3E":"var(--yellow)",fontWeight:"700"}}>{u}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                {[
+                  {tier:"Basic",color:"var(--white)",monthly:"$4.20/mo",annual:"$45/yr",mKey:"basic-monthly",aKey:"basic-annual"},
+                  {tier:"Premium",color:"#aaaaff",monthly:"$5.79/mo",annual:"$58.99/yr",mKey:"premium-monthly",aKey:"premium-annual"},
+                  {tier:"Unlimited+Save",color:"var(--yellow)",monthly:"$6.49/mo",annual:"$69.99/yr",mKey:"unlimited-monthly",aKey:"unlimited-annual"},
+                ].map(p => (
+                  <div key={p.tier} style={{background:"#141414",border:`1px solid ${p.color}44`,padding:"12px 8px",textAlign:"center"}}>
+                    <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:p.color,letterSpacing:".06em",marginBottom:8,fontWeight:700}}>{p.tier}</div>
+                    <button onClick={() => handleCheckout(p.mKey)} style={{width:"100%",background:"transparent",border:`1px solid ${p.color}`,color:p.color,fontFamily:"var(--mono)",fontSize:".58rem",padding:"7px 2px",cursor:"pointer",marginBottom:5}}>{p.monthly}</button>
+                    <button onClick={() => handleCheckout(p.aKey)} style={{width:"100%",background:p.color,border:`1px solid ${p.color}`,color:"#000",fontFamily:"var(--mono)",fontSize:".58rem",padding:"7px 2px",cursor:"pointer",fontWeight:700}}>{p.annual}</button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
