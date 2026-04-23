@@ -411,6 +411,18 @@ function CoverageMap({ onCityClick }) {
           if (onCityClick) onCityClick(city);
         });
       });
+
+      // Add Ontario highlight (not in US GeoJSON) as a polygon around Toronto area
+      new window.google.maps.Circle({
+        center: { lat: 43.6532, lng: -79.3832 },
+        radius: 80000,
+        fillColor: "#ffffff",
+        fillOpacity: 0.15,
+        strokeColor: "#ffffff",
+        strokeOpacity: 0.6,
+        strokeWeight: 1,
+        map,
+      });
     };
     if (window.google?.maps) { loadMap(); return; }
     const wait = setInterval(() => { if (window.google?.maps) { clearInterval(wait); loadMap(); } }, 100);
@@ -963,6 +975,17 @@ export default function App() {
   }, []);
 
   // All useCallback hooks next — defined in dependency order
+  const openAuth = useCallback((mode = "signup") => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setAuthMode(mode);
+    setTimeout(() => setShowAuthModal(true), 300);
+  }, []);
+
+  const openPaywall = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => setShowPaywall(true), 300);
+  }, []);
+
   const resetHome = useCallback(() => {
     localStorage.removeItem("spn_last_phase");
     setPhase("home"); setLocData(null); setSignedUp(false);
@@ -975,9 +998,9 @@ export default function App() {
     if (Auth.isLoggedIn() && count < 8) return true;
     if (!Auth.isLoggedIn() && count < 1) return true;
     // Maxed out
-    if (!Auth.isLoggedIn()) { setShowAuthModal(true); return false; }
-    setShowPaywall(true); return false;
-  }, []);
+    if (!Auth.isLoggedIn()) { openAuth("signup"); return false; }
+    openPaywall(); return false;
+  }, [openAuth, openPaywall]);
 
   const handleAuthSubmit = useCallback(async () => {
     setAuthBusy(true); setAuthErr(null);
@@ -1131,8 +1154,7 @@ export default function App() {
   const handleCheckout = useCallback(async (plan) => {
     // Require login before checkout
     if (!Auth.isLoggedIn()) {
-      setAuthMode("signup");
-      setShowAuthModal(true);
+      openAuth("signup");
       return;
     }
     setCheckoutBusy(plan);
@@ -1156,7 +1178,7 @@ export default function App() {
     } finally {
       setCheckoutBusy(null);
     }
-  }, [locData]);
+  }, [locData, openAuth]);
 
   const handleSignup = useCallback(async () => {
     if (phone.replace(/\D/g,"").length < 10) { setSignupErr("Enter a valid US phone number"); return; }
@@ -1264,16 +1286,16 @@ export default function App() {
           {showUserMenu && (
               <div style={{position:"absolute",top:"100%",left:0,marginTop:6,background:"var(--g2)",border:"1px solid var(--yellow)",minWidth:160,zIndex:300}}>
                 {!user && (
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setAuthMode("signup"); setShowAuthModal(true); }}>Sign Up</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); openAuth("signup"); }}>Sign Up</div>
                 )}
                 {!user && (
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setAuthMode("login"); setShowAuthModal(true); }}>Sign In</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); openAuth("login"); }}>Sign In</div>
                 )}
                 {user && (
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("account"); }}>Account</div>
                 )}
                 {user && (
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowPaywall(true); }}>Upgrade</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); openPaywall(); }}>Upgrade</div>
                 )}
                 <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("faq"); }}>FAQ</div>
                 {user && (
@@ -1472,8 +1494,8 @@ export default function App() {
             ) : (
               <>
                 <div style={{fontFamily:"var(--mono)",fontSize:".75rem",color:"var(--yellow)",marginBottom:12}}>Upgrade to UNLIMITED+SAVE for this feature</div>
-                <button className="p-cta" onClick={() => handleCheckout("unlimited-monthly")} style={{width:"100%"}} disabled={!!checkoutBusy}>
-                  {checkoutBusy==="unlimited-monthly"?"LOADING…":"UPGRADE TO UNLIMITED+SAVE →"}
+                <button className="p-cta" onClick={() => Auth.isLoggedIn() ? openPaywall() : openAuth("signup")} style={{width:"100%"}}>
+                  UPGRADE TO UNLIMITED+SAVE →
                 </button>
               </>
             )}
@@ -1486,11 +1508,7 @@ export default function App() {
               Can't move your car in time? We'll send a trusted driver.<br/>
               Smart key access only · Insured, background-checked drivers.
               <span style={{color:"#aaaaff",marginTop:6,display:"block",cursor:"pointer"}} onClick={() => {
-                if (!Auth.isLoggedIn()) {
-                  setAuthMode("signup");
-                  setShowAuthModal(true);
-                  return;
-                }
+                if (!Auth.isLoggedIn()) { openAuth("signup"); return; }
                 const userEmail = Auth.getUser()?.email || "";
                 const body = `Please put me on the We'll Move Your Car Waitlist!\n\nAccount Info: ${userEmail}`;
                 window.open(`mailto:streetparkinginfo@gmail.com?subject=We'll Move Your Car Waitlist&body=${encodeURIComponent(body)}`, "_blank");
