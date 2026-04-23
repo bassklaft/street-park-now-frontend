@@ -1629,7 +1629,7 @@ export default function App() {
 
       {/* LOADING */}
       {phase === "loading" && (
-        <div className="loading"><div className="spin" /><div className="loading-lbl" style={{textAlign:"center"}}>SCANNING YOUR CITY'S DATABASES…</div></div>
+        <div className="loading"><div className="spin" /><div className="loading-lbl" style={{textAlign:"center"}}>SCANNING YOUR CITY DATABASES…</div></div>
       )}
 
       {/* FAQ PAGE */}
