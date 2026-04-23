@@ -34,7 +34,7 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
     const initAutocomplete = () => {
       if (!inputRef.current || !window.google?.maps?.places) return;
       const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
-        componentRestrictions: { country: "us" },
+        componentRestrictions: { country: ["us", "ca"] },
         fields: ["formatted_address", "geometry", "name", "address_components"],
         types: ["geocode", "establishment"],
       });
