@@ -265,16 +265,16 @@ function ParkMap({ destLat, destLng, userLat, userLng, label, history = [], isGP
         .then(data => {
           if (!alive || !data.length) return;
           console.log("Drawing", data.length, "polylines on ParkMap");
-          const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#888888" };
-          const weights = { red:6, yellow:5, green:4, gray:3 };
+          const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#AAAAAA" };
+          const weights = { red:6, yellow:5, green:4, gray:4 };
           data.forEach(s => {
             if (!s.coords || s.coords.length < 2) return;
             const path = s.coords.map(c => Array.isArray(c) ? {lat:c[0],lng:c[1]} : c);
             new window.google.maps.Polyline({
               path, map, geodesic: true,
-              strokeColor: colors[s.urgency] || "#888888",
-              strokeOpacity: 0.9,
-              strokeWeight: weights[s.urgency] || 3,
+              strokeColor: colors[s.urgency] || "#AAAAAA",
+              strokeOpacity: 1.0,
+              strokeWeight: weights[s.urgency] || 4,
               zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
             });
           });
@@ -605,16 +605,16 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
         .then(data => {
           if (!alive || !Array.isArray(data) || !data.length) return;
           console.log("HeatMap drawing", data.length, "polylines");
-          const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#666666" };
-          const weights = { red:6, yellow:5, green:4, gray:3 };
+          const colors = { red:"#E53E3E", yellow:"#F7C948", green:"#38A169", gray:"#AAAAAA" };
+          const weights = { red:6, yellow:5, green:4, gray:4 };
           data.forEach(s => {
             if (!s.coords || s.coords.length < 2) return;
             const path = s.coords.map(c => Array.isArray(c) ? {lat:c[0],lng:c[1]} : c);
             const pl = new window.google.maps.Polyline({
               path, map, geodesic: true,
               strokeColor: colors[s.urgency] || colors.gray,
-              strokeOpacity: s.urgency === "gray" ? 0.6 : 0.9,
-              strokeWeight: weights[s.urgency] || 3,
+              strokeOpacity: 1.0,
+              strokeWeight: weights[s.urgency] || 4,
               zIndex: s.urgency === "red" ? 3 : s.urgency === "yellow" ? 2 : 1,
             });
             if (onStreetClick && s.street) {
