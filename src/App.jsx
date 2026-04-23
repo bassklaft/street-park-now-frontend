@@ -1261,7 +1261,7 @@ export default function App() {
           {/* Billing */}
           {user.tier !== "free" && (
             <div style={{background:"var(--g1)",padding:"16px",marginBottom:2,cursor:"pointer",borderRadius:2}}
-              onClick={() => window.open("https://billing.stripe.com/p/login/test_00000","_blank")}>
+              onClick={() => window.open("https://billing.stripe.com/p/login/4gM9AVer46RF0vifvAaEE00","_blank")}>
               <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>BILLING & PAYMENT</div>
               <div style={{fontFamily:"var(--mono)",fontSize:".72rem",color:"var(--yellow)"}}>Manage billing, invoices & cancel →</div>
             </div>
