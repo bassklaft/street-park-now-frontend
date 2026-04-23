@@ -394,8 +394,8 @@ function CoverageMap({ onCityClick }) {
     const loadMap = () => {
       if (!window.google?.maps) return;
       const map = new window.google.maps.Map(ref.current, {
-        center: { lat: 46, lng: -96 },
-        zoom: 3,
+        center: { lat: 38, lng: -96 },
+        zoom: 4,
         mapTypeId: "roadmap",
         disableDefaultUI: true,
         gestureHandling: "cooperative",
@@ -459,7 +459,7 @@ function CoverageMap({ onCityClick }) {
       // Add Ontario highlight (not in US GeoJSON) — larger radius + marker
       new window.google.maps.Circle({
         center: { lat: 43.7500, lng: -79.3832 },
-        radius: 180000,
+        radius: 40000,
         fillColor: "#ffffff",
         fillOpacity: 0.15,
         strokeColor: "#ffffff",
