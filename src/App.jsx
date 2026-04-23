@@ -1145,7 +1145,7 @@ export default function App() {
 
           {/* SCROLLING STATS CAROUSEL */}
           <div className="carousel-section">
-            <div className="carousel-label">😤 Tired of parking tickets? You're not alone.</div>
+            <div className="carousel-label">😖 TIRED OF PARKING TICKETS? SO ARE WE. 😤</div>
             <DraggableCarousel />
           </div>
 
