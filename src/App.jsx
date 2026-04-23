@@ -843,8 +843,8 @@ html,body{background:var(--black);color:var(--white);font-family:var(--body);min
 .ambiguous-option-meta{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin-top:2px;}
 .ambiguous-arrow{font-family:var(--mono);font-size:1.5rem;color:var(--muted);}
 inset:0;background:rgba(0,0,0,.92);z-index:500;display:flex;align-items:flex-end;justify-content:center}
-.auth-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
-.paywall-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:flex-end;justify-content:center}
+.auth-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+.paywall-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:flex-end;justify-content:center}
 .auth-modal{background:var(--g2);border:1px solid var(--yellow);padding:32px 28px;width:100%;max-width:420px;animation:slideUp .25s ease;position:relative}
 .auth-title{font-family:var(--display);font-size:2rem;letter-spacing:.06em;margin-bottom:4px}
 .auth-sub{font-family:var(--mono);font-size:.85rem;color:var(--muted);margin-bottom:24px;letter-spacing:.06em;line-height:1.6}
@@ -1077,14 +1077,12 @@ export default function App() {
 
   // All useCallback hooks next — defined in dependency order
   const openAuth = useCallback((mode = "signup") => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
     setAuthMode(mode);
-    setTimeout(() => setShowAuthModal(true), 300);
+    setShowAuthModal(true);
   }, []);
 
   const openPaywall = useCallback(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => setShowPaywall(true), 300);
+    setShowPaywall(true);
   }, []);
 
   const resetHome = useCallback(() => {
