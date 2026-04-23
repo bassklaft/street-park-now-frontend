@@ -297,6 +297,13 @@ const COVERED_CITIES = [
   { name: "Toronto", lat: 43.6532, lng: -79.3832 },
 ];
 
+// States that contain our covered cities
+const COVERED_STATES = ["New York","California","Illinois","Massachusetts","Pennsylvania",
+  "Washington","Florida","Georgia","Colorado","Tennessee","Texas","Oregon","Minnesota",
+  "District of Columbia","New Jersey","Maryland","Virginia","Ontario"];
+
+const COVERED_STATES_ABBR = ["NY","CA","IL","MA","PA","WA","FL","GA","CO","TN","TX","OR","MN","DC","NJ","MD","VA"];
+
 function CoverageMap({ onCityClick }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -304,39 +311,61 @@ function CoverageMap({ onCityClick }) {
     const loadMap = () => {
       if (!window.google?.maps) return;
       const map = new window.google.maps.Map(ref.current, {
-        center: { lat: 48, lng: -95 },
+        center: { lat: 46, lng: -96 },
         zoom: 3,
         mapTypeId: "roadmap",
         disableDefaultUI: true,
         gestureHandling: "cooperative",
         styles: [
           { elementType: "geometry", stylers: [{ color: "#111111" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#444444" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#555555" }] },
           { elementType: "labels.text.stroke", stylers: [{ color: "#111111" }] },
-          { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#555555" }] },
-          { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#333333" }] },
+          { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#666666" }] },
+          { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#444444" }] },
+          { featureType: "administrative.province", elementType: "geometry.fill", stylers: [{ color: "#111111" }] },
           { featureType: "road", stylers: [{ visibility: "off" }] },
           { featureType: "poi", stylers: [{ visibility: "off" }] },
           { featureType: "transit", stylers: [{ visibility: "off" }] },
           { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] },
         ],
       });
+
+      // Load GeoJSON state boundaries and highlight covered states
+      map.data.loadGeoJson(
+        "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/US-state.geojson",
+        null,
+        () => {
+          map.data.setStyle(feature => {
+            const name = feature.getProperty("name");
+            const isCovered = COVERED_STATES.includes(name);
+            return {
+              fillColor: isCovered ? "#38A169" : "#111111",
+              fillOpacity: isCovered ? 0.35 : 0,
+              strokeColor: isCovered ? "#38A169" : "#333333",
+              strokeWeight: isCovered ? 1.5 : 0.5,
+              strokeOpacity: 0.8,
+            };
+          });
+        }
+      );
+
+      // Add city markers on top
       COVERED_CITIES.forEach(city => {
         const marker = new window.google.maps.Marker({
           position: { lat: city.lat, lng: city.lng },
           map,
           icon: {
             path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 7,
-            fillColor: "#38A169",
+            scale: 5,
+            fillColor: "#F7C948",
             fillOpacity: 1,
             strokeColor: "#ffffff",
-            strokeWeight: 1.5,
+            strokeWeight: 1,
           },
           title: city.name,
         });
         const info = new window.google.maps.InfoWindow({
-          content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:2px 6px;cursor:pointer"><b>${city.name}</b><br><span style="color:#666">Tap to search</span></div>`
+          content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:2px 6px"><b>${city.name}</b><br><span style="color:#555">Tap to search</span></div>`
         });
         marker.addListener("click", () => {
           info.open(map, marker);
@@ -351,10 +380,14 @@ function CoverageMap({ onCityClick }) {
   return (
     <div style={{position:"relative"}}>
       <div ref={ref} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111"}} />
-      <div style={{display:"flex",gap:12,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",alignItems:"center"}}>
+      <div style={{display:"flex",gap:16,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:10,height:10,borderRadius:"50%",background:"#38A169",border:"1.5px solid #fff"}} />
-          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>Covered city · tap to search</span>
+          <div style={{width:16,height:8,background:"rgba(56,161,105,0.35)",border:"1.5px solid #38A169",borderRadius:2}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>Covered state</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:"#F7C948",border:"1px solid #fff"}} />
+          <span style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)"}}>City · tap to search</span>
         </div>
       </div>
     </div>
