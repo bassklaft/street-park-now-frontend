@@ -1159,6 +1159,7 @@ export default function App() {
   const [authErr,        setAuthErr]        = useState(null);
   const [authBusy,       setAuthBusy]       = useState(false);
   const [showUserMenu,   setShowUserMenu]   = useState(false);
+  const [streetPickerOpen, setStreetPickerOpen] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showFAQ,        setShowFAQ]        = useState(false);
   const menuRef = useRef(null);
@@ -1916,6 +1917,46 @@ export default function App() {
               <div className="loc-eyebrow">📍 {locData.isEstablishment ? "Search results" : "Your location"}</div>
               <div className="loc-name">{locData.label || locData.street}</div>
               <div className="loc-meta">{locData.isEstablishment ? `${locData.establishments?.length} locations · sorted by distance` : [locData.neighborhood,locData.borough].filter(Boolean).join(" · ") + " · Updated just now"}</div>
+              {locData.isGPS && Array.isArray(locData.nearbyStreets) && locData.nearbyStreets.length > 1 && (
+                <div style={{marginTop:8}}>
+                  <button
+                    onClick={() => setStreetPickerOpen(v => !v)}
+                    style={{background:"none",border:"none",padding:0,color:"var(--yellow)",fontFamily:"var(--mono)",fontSize:".7rem",letterSpacing:".08em",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"3px"}}
+                  >
+                    {streetPickerOpen ? "▴ Close" : "Not your street? Change ▾"}
+                  </button>
+                  {streetPickerOpen && (
+                    <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6,maxWidth:"100%"}}>
+                      {locData.nearbyStreets.map(s => {
+                        const active = (locData.street || "").toUpperCase() === s.toUpperCase();
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => {
+                              setLocData({ ...locData, street: s, label: s });
+                              setStreetPickerOpen(false);
+                            }}
+                            style={{
+                              background: active ? "var(--yellow)" : "var(--g2)",
+                              color: active ? "var(--black)" : "var(--white)",
+                              border: `1px solid ${active ? "var(--yellow)" : "#333"}`,
+                              fontFamily:"var(--mono)",
+                              fontSize:".65rem",
+                              letterSpacing:".05em",
+                              padding:"6px 10px",
+                              cursor:"pointer",
+                              borderRadius:2,
+                              whiteSpace:"nowrap",
+                            }}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {!locData.isEstablishment && <button className="re-btn" onClick={() => loadAll(locData, true)}>↻ REFRESH</button>}
           </div>
