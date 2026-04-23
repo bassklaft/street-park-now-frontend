@@ -333,8 +333,8 @@ function HeatMap({ userLat, userLng, onStreetClick }) {
 
       const drawStreets = (streets) => {
         if (!alive || !mapRef.current) return;
-        const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#444444" };
-        const weightMap = { red: 6, yellow: 5, green: 4, gray: 2 };
+        const colorMap = { red: "#E53E3E", yellow: "#F7C948", green: "#38A169", gray: "#666666" };
+        const weightMap = { red: 6, yellow: 5, green: 4, gray: 3 };
         streets.forEach(s => {
           if (!s.coords?.length) return;
           const path = s.coords.map(([lat, lng]) => ({ lat, lng }));
@@ -1006,28 +1006,26 @@ export default function App() {
     if (window.__AUTO_GPS__) { window.__AUTO_GPS__ = false; setTimeout(handleGPS, 500); }
   }, [handleGPS]);
 
-  // Check location permission on load — if already granted, auto-search nearby streets
+  // Check location permission on load — set coords for heatmap, don't auto-navigate away
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+      return;
+    }
     navigator.permissions?.query({ name: "geolocation" }).then(perm => {
       if (perm.state === "granted") {
         setLocationAllowed(true);
         navigator.geolocation.getCurrentPosition(
           ({ coords: { latitude: lat, longitude: lng } }) => {
             setHomeMapCoords({ lat, lng });
-            // Auto-trigger full search so streets appear below map
-            if (canSearch()) {
-              tickSearch();
-              setPhase("loading");
-              reverseGeocode(lat, lng)
-                .then(loc => loadAll({ ...loc, lat, lng }))
-                .catch(() => setPhase("home"));
-            }
           },
           () => setHomeMapCoords({ lat: 40.7580, lng: -73.9855 })
         );
       } else if (perm.state === "denied") {
         setLocationAllowed(false);
+        setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
+      } else {
+        // Not yet determined — show NYC by default
         setHomeMapCoords({ lat: 40.7580, lng: -73.9855 });
       }
     }).catch(() => {
@@ -1112,7 +1110,7 @@ export default function App() {
           {/* HERO */}
           <div className="hero-section">
             <h1 className="h1">STREET PARK <em>NOW.</em></h1>
-            <p className="app-tagline">Know When To Park And When To Move</p>
+            <p className="app-tagline">Know When To Park & When To Move</p>
             <div className="search-section">
               {searchCount > 0 && (
                 <div className="gate-note" style={{color: Auth.isPaid() ? "var(--yellow)" : remaining === 0 ? "var(--red)" : "var(--yellow)"}}>
@@ -1143,14 +1141,18 @@ export default function App() {
             </div>
           </div>
 
-          {/* HEAT MAP */}
+          {/* HEAT MAP — shows once location is known */}
           {homeMapCoords && (
-            <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-                TAP THE LIVE PARKING HEAT MAP 🔥🗺 · OR SEARCH BAR
-              </div>
-              <HeatMap userLat={homeMapCoords.lat} userLng={homeMapCoords.lng} onStreetClick={(street) => { setQuery(street); handleSearch(); }} />
+          <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
+              TAP THE LIVE PARKING HEAT MAP 🔥🗺 · OR SEARCH BAR
             </div>
+            <HeatMap
+              userLat={homeMapCoords.lat}
+              userLng={homeMapCoords.lng}
+              onStreetClick={(street) => { setQuery(street); handleSearch(); }}
+            />
+          </div>
           )}
 
           {/* SCROLLING STATS CAROUSEL */}
