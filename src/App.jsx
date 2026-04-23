@@ -630,6 +630,8 @@ const CITY_STATS = [
   { city:"Nashville", tickets:"250,000+", avg:"$35", total:"$9M+" },
   { city:"Austin", tickets:"350,000+", avg:"$45", total:"$16M+" },
   { city:"Minneapolis", tickets:"280,000+", avg:"$40", total:"$11M+" },
+  { city:"Dallas", tickets:"1,500,000+", avg:"$40", total:"$60M+" },
+  { city:"Sacramento", tickets:"500,000+", avg:"$58", total:"$29M+" },
 ];
 
 function DraggableCarousel() {
@@ -1025,22 +1027,22 @@ export default function App() {
               style={{whiteSpace:"nowrap",fontSize:"1rem",letterSpacing:".05em",padding:"4px 12px"}}
             >☰</button>
             {showUserMenu && (
-              <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"var(--g2)",border:"1px solid var(--yellow)",minWidth:160,zIndex:300}} onClick={() => setShowUserMenu(false)}>
+              <div style={{position:"absolute",top:"100%",right:0,marginTop:6,background:"var(--g2)",border:"1px solid var(--yellow)",minWidth:160,zIndex:300}}>
                 {!user && (
-                  <div className="menu-item" onClick={() => { setAuthMode("signup"); setShowAuthModal(true); }}>Sign Up</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setAuthMode("signup"); setShowAuthModal(true); }}>Sign Up</div>
                 )}
                 {!user && (
-                  <div className="menu-item" onClick={() => { setAuthMode("login"); setShowAuthModal(true); }}>Sign In</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setAuthMode("login"); setShowAuthModal(true); }}>Sign In</div>
                 )}
                 {user && (
-                  <div className="menu-item" onClick={() => setShowAccountModal(true)}>Account</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowAccountModal(true); }}>Account</div>
                 )}
                 {user && (
-                  <div className="menu-item" onClick={() => setShowPaywall(true)}>Upgrade</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowPaywall(true); }}>Upgrade</div>
                 )}
-                <div className="menu-item" onClick={() => setShowFAQ(true)}>FAQ</div>
+                <div className="menu-item" onClick={() => { setShowUserMenu(false); setShowFAQ(true); }}>FAQ</div>
                 {user && (
-                  <div className="menu-item" style={{color:"var(--red)"}} onClick={handleLogout}>Sign Out</div>
+                  <div className="menu-item" style={{color:"var(--red)"}} onClick={() => { setShowUserMenu(false); handleLogout(); }}>Sign Out</div>
                 )}
               </div>
             )}
@@ -1512,34 +1514,69 @@ export default function App() {
       {/* ACCOUNT MODAL */}
       {showAccountModal && user && (
         <div className="auth-overlay" onClick={() => setShowAccountModal(false)}>
-          <div className="auth-modal" onClick={e => e.stopPropagation()}>
+          <div className="auth-modal" onClick={e => e.stopPropagation()} style={{maxHeight:"85vh",overflowY:"auto"}}>
             <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#555",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowAccountModal(false)}>✕</button>
-            <div className="auth-title">MY ACCOUNT</div>
-            <div style={{marginBottom:20}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",letterSpacing:".08em",marginBottom:4}}>NAME</div>
-              <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)"}}>{user.name}</div>
+            <div className="auth-title" style={{marginBottom:20}}>MY ACCOUNT</div>
+
+            {/* Profile */}
+            <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:2}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>NAME</div>
+              <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)",fontWeight:600}}>{user.name}</div>
             </div>
-            <div style={{marginBottom:20}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",letterSpacing:".08em",marginBottom:4}}>EMAIL</div>
+            <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:16}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>EMAIL</div>
               <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)"}}>{user.email}</div>
             </div>
-            <div style={{marginBottom:24}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",letterSpacing:".08em",marginBottom:4}}>CURRENT PLAN</div>
-              <div style={{fontFamily:"var(--display)",fontSize:"1.4rem",color:"var(--yellow)",letterSpacing:".06em"}}>
-                {user.tier === "unlimited" ? "UNLIMITED+SAVE" : user.tier === "premium" ? "PREMIUM" : user.tier === "basic" ? "BASIC" : "FREE"}
-              </div>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",marginTop:4}}>
-                {user.tier === "unlimited" ? "Unlimited searches + saved locations list" :
-                 user.tier === "premium"   ? "Unlimited searches" :
-                 user.tier === "basic"     ? "999 searches per period" :
-                 "8 free searches"}
+
+            {/* Plan */}
+            <div style={{background:"var(--g1)",border:"1px solid #2a2a2a",padding:"14px 16px",marginBottom:2}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:6}}>CURRENT PLAN</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div>
+                  <div style={{fontFamily:"var(--display)",fontSize:"1.3rem",color:"var(--yellow)",letterSpacing:".06em"}}>
+                    {user.tier === "unlimited" ? "UNLIMITED+SAVE" : user.tier === "premium" ? "PREMIUM" : user.tier === "basic" ? "BASIC" : "FREE"}
+                  </div>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)",marginTop:3}}>
+                    {user.tier === "unlimited" ? "Unlimited searches + saved locations" :
+                     user.tier === "premium"   ? "Unlimited searches" :
+                     user.tier === "basic"     ? "999 searches per period" :
+                     "8 free searches total"}
+                  </div>
+                </div>
+                {user.tier !== "unlimited" && (
+                  <button onClick={() => { setShowAccountModal(false); setShowPaywall(true); }}
+                    style={{background:"var(--yellow)",color:"#000",border:"none",fontFamily:"var(--mono)",fontSize:".6rem",padding:"6px 12px",cursor:"pointer",letterSpacing:".06em",whiteSpace:"nowrap"}}>
+                    UPGRADE →
+                  </button>
+                )}
               </div>
             </div>
-            {user.tier !== "unlimited" && (
-              <button className="auth-btn" onClick={() => { setShowAccountModal(false); setShowPaywall(true); }}>
-                UPGRADE PLAN →
-              </button>
+
+            {/* Billing */}
+            {user.tier !== "free" && (
+              <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:2,cursor:"pointer"}}
+                onClick={() => window.open("https://billing.stripe.com/p/login/test_00000", "_blank")}>
+                <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>BILLING & PAYMENT</div>
+                <div style={{fontFamily:"var(--mono)",fontSize:".7rem",color:"var(--yellow)"}}>Manage billing, invoices & cancel →</div>
+              </div>
             )}
+
+            {/* Usage */}
+            <div style={{background:"var(--g1)",padding:"14px 16px",marginBottom:16}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:4}}>SEARCHES USED</div>
+              <div style={{fontFamily:"var(--display)",fontSize:"1.5rem",color:"var(--white)"}}>
+                {searchCount} <span style={{fontSize:".8rem",color:"var(--muted)"}}>
+                  {user.tier === "unlimited" || user.tier === "premium" ? "/ unlimited" :
+                   user.tier === "basic" ? "/ 999" : "/ 8 free"}
+                </span>
+              </div>
+            </div>
+
+            {/* Support */}
+            <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",textAlign:"center",lineHeight:1.8}}>
+              Questions? <a href="mailto:support@streetparknow.app" style={{color:"var(--yellow)"}}>support@streetparknow.app</a><br/>
+              <a href="https://streetparknow.vercel.app/privacy.html" target="_blank" style={{color:"#555"}}>Privacy Policy</a>
+            </div>
           </div>
         </div>
       )}
@@ -1578,28 +1615,66 @@ export default function App() {
       {/* PAYWALL */}
       {showPaywall && (
         <div className="paywall-overlay" onClick={() => setShowPaywall(false)}>
-          <div className="paywall-sheet" onClick={e => e.stopPropagation()}>
-            <div className="paywall-icon">🚗</div>
-            <div className="paywall-title">UNLOCK STREET PARK NOW</div>
-            <div className="paywall-sub">You've used your free searches. Choose a plan to keep going.</div>
-            <div className="paywall-plans" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:12}}>
+          <div className="paywall-sheet" onClick={e => e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto",width:"100%",maxWidth:560}}>
+            <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"#555",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowPaywall(false)}>✕</button>
+            <div className="paywall-title" style={{marginBottom:4}}>CHOOSE YOUR PLAN</div>
+            <div className="paywall-sub" style={{marginBottom:20}}>All plans include the live parking heat map, street cleaning schedules, film permits, events & weather.</div>
+
+            {/* Feature comparison table */}
+            <div style={{overflowX:"auto",marginBottom:20}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"var(--mono)",fontSize:".62rem"}}>
+                <thead>
+                  <tr>
+                    <th style={{textAlign:"left",padding:"8px 8px 8px 0",color:"var(--muted)",fontWeight:400,borderBottom:"1px solid #2a2a2a"}}>Feature</th>
+                    <th style={{padding:"8px",color:"var(--white)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Basic</th>
+                    <th style={{padding:"8px",color:"#aaaaff",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Premium</th>
+                    <th style={{padding:"8px",color:"var(--yellow)",fontWeight:700,borderBottom:"1px solid #2a2a2a",textAlign:"center"}}>Unlimited<br/>+Save</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Searches",           "999/period", "Unlimited", "Unlimited"],
+                    ["Live Heat Map",      "✓", "✓", "✓"],
+                    ["Street Cleaning",    "✓", "✓", "✓"],
+                    ["Film Permits",       "✓", "✓", "✓"],
+                    ["Events & Weather",   "✓", "✓", "✓"],
+                    ["Recent 2 on Map",    "✓", "✓", "✓"],
+                    ["Saved Locations",    "—", "—", "Up to 10"],
+                    ["One-Tap Rerun",      "—", "—", "✓"],
+                  ].map(([feat, b, p, u]) => (
+                    <tr key={feat}>
+                      <td style={{padding:"10px 8px 10px 0",color:"var(--muted)",borderBottom:"1px solid #1a1a1a"}}>{feat}</td>
+                      <td style={{padding:"10px 8px",textAlign:"center",color: b==="✓"?"var(--green)":b==="—"?"#333":"var(--white)",borderBottom:"1px solid #1a1a1a"}}>{b}</td>
+                      <td style={{padding:"10px 8px",textAlign:"center",color: p==="✓"?"var(--green)":p==="—"?"#333":"#aaaaff",borderBottom:"1px solid #1a1a1a"}}>{p}</td>
+                      <td style={{padding:"10px 8px",textAlign:"center",color: u==="✓"||u.includes("Up")?"var(--green)":u==="—"?"#333":"var(--yellow)",borderBottom:"1px solid #1a1a1a"}}>{u}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pricing cards */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16}}>
               {[
-                {key:"basic-monthly",  name:"Basic",     price:"$4.20", per:"/mo",  desc:"999 searches"},
-                {key:"basic-annual",   name:"Basic",     price:"$45",   per:"/yr",  desc:"999 searches", tag:"SAVE 11%"},
-                {key:"premium-monthly",name:"Premium",   price:"$5.79", per:"/mo",  desc:"Unlimited"},
-                {key:"premium-annual", name:"Premium",   price:"$58.99",per:"/yr",  desc:"Unlimited",    tag:"BEST VALUE"},
-                {key:"unlimited-monthly",name:"Unlimited+Save",price:"$6.49",per:"/mo",desc:"Unlimited + Saved"},
-                {key:"unlimited-annual", name:"Unlimited+Save",price:"$69.99",per:"/yr",desc:"Unlimited + Saved",tag:"SAVE 10%"},
+                { tier:"Basic",          color:"var(--white)",  monthly:"$4.20/mo", annual:"$45/yr",    monthlyKey:"basic-monthly",   annualKey:"basic-annual",    save:"Save 11%" },
+                { tier:"Premium",        color:"#aaaaff",       monthly:"$5.79/mo", annual:"$58.99/yr", monthlyKey:"premium-monthly", annualKey:"premium-annual",  save:"Best Value" },
+                { tier:"Unlimited+Save", color:"var(--yellow)", monthly:"$6.49/mo", annual:"$69.99/yr", monthlyKey:"unlimited-monthly",annualKey:"unlimited-annual",save:"Save 10%" },
               ].map(p => (
-                <div key={p.key} className={`paywall-plan ${p.tag==="BEST VALUE"?"best":""}`} onClick={() => handleCheckout(p.key)}>
-                  <div className="pp-name">{p.name}</div>
-                  <div className="pp-price" style={{fontSize:"1.3rem"}}>{p.price}</div>
-                  <div className="pp-per">{p.per}</div>
-                  <div style={{fontFamily:"var(--mono)",fontSize:".5rem",color:"#666",marginTop:3}}>{p.desc}</div>
-                  {p.tag && <div className="pp-tag">{p.tag}</div>}
+                <div key={p.tier} style={{background:"var(--g1)",border:`1px solid ${p.color}22`,padding:"14px 10px",textAlign:"center"}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:p.color,letterSpacing:".08em",marginBottom:10,fontWeight:700}}>{p.tier}</div>
+                  <button onClick={() => handleCheckout(p.monthlyKey)} style={{width:"100%",background:"transparent",border:`1px solid ${p.color}`,color:p.color,fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",marginBottom:6,transition:"background .15s"}}
+                    onMouseOver={e => e.target.style.background=`${p.color}22`}
+                    onMouseOut={e => e.target.style.background="transparent"}>
+                    {p.monthly}
+                  </button>
+                  <button onClick={() => handleCheckout(p.annualKey)} style={{width:"100%",background:p.color,border:`1px solid ${p.color}`,color:"#000",fontFamily:"var(--mono)",fontSize:".6rem",padding:"8px 4px",cursor:"pointer",fontWeight:700}}>
+                    {p.annual}
+                  </button>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".5rem",color:"var(--muted)",marginTop:5}}>{p.save}</div>
                 </div>
               ))}
             </div>
+
             <button className="paywall-dismiss" onClick={() => setShowPaywall(false)}>Maybe later</button>
           </div>
         </div>
