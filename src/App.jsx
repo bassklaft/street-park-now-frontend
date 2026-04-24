@@ -775,6 +775,10 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
   const pointMarkersRef = useRef([]);
   const lastFetchRef = useRef({ lat: userLat, lng: userLng });
   const watchIdRef = useRef(null);
+  // Explicit loading flag for the overlay. Tells the user "polylines are
+  // coming" instead of leaving them staring at an empty map — /api/heatmap
+  // can take 5-15s for uncached cities because of the Claude hop.
+  const [heatLoading, setHeatLoading] = useState(true);
 
   // Draw helper exposed via ref closure so both the init effect and the
   // live-tracking effect can repaint the map after a 200m move.
@@ -784,8 +788,10 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
     if (!userLat || !userLng || !divRef.current) return;
     let alive = true;
     lastFetchRef.current = { lat: userLat, lng: userLng };
+    setHeatLoading(true);
 
     const dataPromise = fetchHeatmap(userLat, userLng);
+    dataPromise.finally(() => { if (alive) setHeatLoading(false); });
 
     const clearPolylines = () => {
       polylinesRef.current.forEach(p => p.setMap(null));
@@ -953,6 +959,35 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
   return (
     <div style={{position:"relative",marginBottom:16}}>
       <div ref={divRef} style={{width:"100%",height:"300px",border:"1px solid #2a2a2a",background:"#111",display:"block"}} />
+      {/* Loading overlay — visible until fetchHeatmap resolves so users
+          know polylines are actively being loaded instead of mistaking
+          the empty map for a broken feature. */}
+      {heatLoading && (
+        <div style={{
+          position:"absolute", top:0, left:0, right:0, height:"300px",
+          pointerEvents:"none",
+          display:"flex", alignItems:"flex-end", justifyContent:"center",
+          paddingBottom:16,
+        }}>
+          <div style={{
+            background:"rgba(8,8,8,0.88)",
+            border:"1px solid var(--yellow)",
+            padding:"8px 14px",
+            display:"flex", alignItems:"center", gap:10,
+            fontFamily:"var(--mono)", fontSize:".68rem",
+            color:"var(--yellow)", letterSpacing:".08em",
+          }}>
+            <span style={{
+              display:"inline-block", width:10, height:10,
+              borderRadius:"50%",
+              border:"2px solid var(--yellow)",
+              borderTopColor:"transparent",
+              animation:"spin 0.75s linear infinite",
+            }} />
+            <span>LOADING LIVE PARKING HEATMAP…</span>
+          </div>
+        </div>
+      )}
       {/* Line legend — polyline urgency colors */}
       <div style={{display:"flex",gap:16,padding:"8px 12px",background:"var(--g2)",borderTop:"1px solid #222",flexWrap:"wrap",alignItems:"center"}}>
         <span style={{fontFamily:"var(--mono)",fontSize:".52rem",color:"var(--muted)",letterSpacing:".06em",textTransform:"uppercase"}}>Lines:</span>
