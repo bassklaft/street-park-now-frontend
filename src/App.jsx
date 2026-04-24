@@ -637,6 +637,7 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
   const mapRef = useRef(null);
   const markerRef = useRef(null);
   const polylinesRef = useRef([]);
+  const pointMarkersRef = useRef([]);
   const lastFetchRef = useRef({ lat: userLat, lng: userLng });
   const watchIdRef = useRef(null);
 
@@ -654,6 +655,8 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
     const clearPolylines = () => {
       polylinesRef.current.forEach(p => p.setMap(null));
       polylinesRef.current = [];
+      pointMarkersRef.current.forEach(d => d.setMap(null));
+      pointMarkersRef.current = [];
     };
 
     const drawPolylines = (map, data) => {
@@ -706,6 +709,54 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
       markerRef.current = marker;
 
       dataPromise.then(data => drawPolylines(map, data));
+
+      // Point-restriction dots — fetch once per mount, render as small
+      // colored circles at each sign location. Only visible when the map
+      // is zoomed past level 15 so they don't clutter the zoomed-out view.
+      const POINT_COLORS = {
+        fire_zone:         "#E53E3E", // red
+        tow_away:          "#E53E3E",
+        no_parking_always: "#DD6B20", // orange
+        bus_stop:          "#3182CE", // blue
+      };
+      const POINT_LABELS = {
+        fire_zone:         "🚒 Fire Zone",
+        tow_away:          "🚨 Tow-Away",
+        no_parking_always: "⛔ No Parking Anytime",
+        bus_stop:          "🚌 Bus Stop",
+      };
+      fetch(`${API}/api/point-restrictions?lat=${userLat}&lng=${userLng}`)
+        .then(r => r.ok ? r.json() : [])
+        .then(points => {
+          if (!alive || !Array.isArray(points) || !points.length) return;
+          const initiallyVisible = (map.getZoom() || 0) >= 15;
+          for (const p of points) {
+            const color = POINT_COLORS[p.type] || "#888888";
+            const dot = new window.google.maps.Marker({
+              position: { lat: p.lat, lng: p.lng },
+              map: initiallyVisible ? map : null,
+              icon: {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 4,
+                fillColor: color,
+                fillOpacity: 0.95,
+                strokeColor: "#000",
+                strokeWeight: 0.5,
+              },
+              title: `${POINT_LABELS[p.type] || p.type} — ${p.description}`,
+              zIndex: 4,
+            });
+            pointMarkersRef.current.push(dot);
+          }
+          // Toggle dot visibility on zoom changes. <15 hides all; >=15 shows.
+          const toggleDots = () => {
+            const z = map.getZoom() || 0;
+            const m = z >= 15 ? map : null;
+            pointMarkersRef.current.forEach(d => d.setMap(m));
+          };
+          map.addListener("zoom_changed", toggleDots);
+        })
+        .catch(e => console.error("point-restrictions fetch:", e));
     };
 
     if (window.google?.maps) {
