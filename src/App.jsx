@@ -1451,6 +1451,7 @@ export default function App() {
   const [showUserMenu,   setShowUserMenu]   = useState(false);
   const [streetPickerOpen, setStreetPickerOpen] = useState(false);
   const [liveTracking,     setLiveTracking]     = useState(false);
+  const [recentOpen,       setRecentOpen]       = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showFAQ,        setShowFAQ]        = useState(false);
   const menuRef = useRef(null);
@@ -1872,44 +1873,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Recent Searches — logged-in users, last 5, one-tap rerun */}
-          {user && savedSearches.length > 0 && (
-            <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
-              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-                🕐 RECENT SEARCHES · TAP TO RE-RUN
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {savedSearches.slice(0, 5).map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => handlePlaceSelect({ lat: s.lat, lng: s.lng, label: s.label, formatted: s.label })}
-                    style={{
-                      background:"var(--g2)",border:"1px solid #2a2a2a",
-                      padding:"10px 14px",cursor:"pointer",textAlign:"left",
-                      display:"flex",alignItems:"center",gap:10,
-                      transition:"border-color .15s",
-                    }}
-                  >
-                    <span style={{fontSize:".9rem",flexShrink:0}}>📍</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)",letterSpacing:".02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {s.label}
-                      </div>
-                      {(s.neighborhood || s.borough) && (
-                        <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)",marginTop:2,letterSpacing:".04em"}}>
-                          {[s.neighborhood, s.borough].filter(Boolean).join(" · ")}
-                        </div>
-                      )}
-                    </div>
-                    <span style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--yellow)",letterSpacing:".06em",flexShrink:0}}>
-                      RE-RUN →
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
@@ -1928,6 +1891,61 @@ export default function App() {
               <CoverageMap onCityClick={(city) => { setQuery(city.name); handleSearch(); }} />
             )}
           </div>
+
+          {/* Recent Searches — collapsible, logged-in users, last 5, one-tap rerun.
+              Max-height + overflow:hidden drive the smooth expand/collapse. */}
+          {user && savedSearches.length > 0 && (
+            <div style={{width:"100%",maxWidth:560,padding:"16px 24px 0"}}>
+              <button
+                onClick={() => setRecentOpen(v => !v)}
+                style={{
+                  width:"100%",background:"var(--g2)",border:"1px solid #2a2a2a",
+                  padding:"10px 14px",cursor:"pointer",
+                  display:"flex",alignItems:"center",justifyContent:"space-between",
+                  fontFamily:"var(--mono)",fontSize:".7rem",color:"var(--yellow)",
+                  letterSpacing:".1em",textTransform:"uppercase",
+                }}
+                aria-expanded={recentOpen}
+              >
+                <span>🕐 Recent Searches {savedSearches.length > 0 && <span style={{color:"var(--muted)",marginLeft:6}}>({Math.min(5, savedSearches.length)})</span>}</span>
+                <span style={{display:"inline-block",transition:"transform .2s ease",transform:recentOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+              </button>
+              <div style={{
+                overflow:"hidden",
+                maxHeight: recentOpen ? `${savedSearches.slice(0,5).length * 64 + 10}px` : "0px",
+                transition:"max-height .25s ease",
+              }}>
+                <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:6}}>
+                  {savedSearches.slice(0, 5).map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => handlePlaceSelect({ lat: s.lat, lng: s.lng, label: s.label, formatted: s.label })}
+                      style={{
+                        background:"var(--g2)",border:"1px solid #2a2a2a",
+                        padding:"10px 14px",cursor:"pointer",textAlign:"left",
+                        display:"flex",alignItems:"center",gap:10,
+                      }}
+                    >
+                      <span style={{fontSize:".9rem",flexShrink:0}}>📍</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)",letterSpacing:".02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {s.label}
+                        </div>
+                        {(s.neighborhood || s.borough) && (
+                          <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)",marginTop:2,letterSpacing:".04em"}}>
+                            {[s.neighborhood, s.borough].filter(Boolean).join(" · ")}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--yellow)",letterSpacing:".06em",flexShrink:0}}>
+                        RE-RUN →
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* SCROLLING STATS CAROUSEL */}
           <div className="carousel-section">
