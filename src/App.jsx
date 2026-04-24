@@ -62,8 +62,20 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
       if (userLat && userLng) {
         const center = new window.google.maps.LatLng(userLat, userLng);
         req.origin = center;        // enables distance_meters in predictions
-        req.location = center;      // bias results to near the user
-        req.radius = 50000;         // ~50km — broad enough for "naya" style searches
+        // Tight bounds around the user (~5km) AS a *hard* bias. Google's ranker
+        // was over-weighting popular Manhattan results even with a 50km radius,
+        // so we constrain the search area via bounds and let strictBounds=false
+        // allow just-outside fallbacks if the user types something truly far away.
+        const span = 0.05; // ~5.5km lat / ~4.2km lng at NYC latitudes
+        req.bounds = new window.google.maps.LatLngBounds(
+          { lat: userLat - span, lng: userLng - span },
+          { lat: userLat + span, lng: userLng + span }
+        );
+        req.strictBounds = false;
+        // Also keep location/radius so Google treats the point as the centroid
+        // of ranking (legacy fields; newer google maps builds honor bounds).
+        req.location = center;
+        req.radius = 5000;
       }
       serviceRef.current.getPlacePredictions(req, (preds, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && preds) {
