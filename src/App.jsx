@@ -2896,27 +2896,6 @@ export default function App() {
             {!locData.isEstablishment && <button className="re-btn" onClick={() => loadAll(locData, true)}>↻ REFRESH</button>}
           </div>
 
-          {/* "Verify on Street View" — opens Google Street View at the
-              search coords in a new tab. Ground-truth checker since
-              our automated data can miss posted signs. */}
-          {locData.lat && locData.lng && (
-            <a
-              href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${locData.lat},${locData.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-                padding:"10px 14px",marginBottom:14,
-                background:"var(--g2)",border:"1px solid var(--yellow)",
-                color:"var(--yellow)",fontFamily:"var(--mono)",
-                fontSize:".7rem",letterSpacing:".1em",textTransform:"uppercase",
-                textDecoration:"none",cursor:"pointer",
-              }}
-            >
-              🧭 Verify Signs on Google Street View →
-            </a>
-          )}
-
           {/* Map — show heatmap with polylines when we have GPS coords */}
           {locData.lat && locData.lng && (
             <div className="map-wrap">
@@ -3087,15 +3066,6 @@ export default function App() {
                             </div>
                           )}
                           <div className="clean-raw">{c.raw}</div>
-                          {locData.lat && locData.lng && (
-                            <a
-                              href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${locData.lat},${locData.lng}`}
-                              target="_blank" rel="noopener noreferrer"
-                              style={{display:"inline-block",marginTop:8,fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".06em",textDecoration:"underline",textUnderlineOffset:"2px"}}
-                            >
-                              🧭 Verify on Street View →
-                            </a>
-                          )}
                         </div>
                         {isBlurred && i === 2 && (
                           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,background:"rgba(8,8,8,0.7)",cursor:"pointer"}} onClick={() => setShowAuthModal(true)}>
@@ -3148,15 +3118,6 @@ export default function App() {
                               {r.block && <>Block: {r.block}</>}
                             </div>
                           )}
-                          {(r.lat && r.lng) || (locData.lat && locData.lng) ? (
-                            <a
-                              href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${r.lat || locData.lat},${r.lng || locData.lng}`}
-                              target="_blank" rel="noopener noreferrer"
-                              style={{display:"inline-block",marginTop:8,fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".06em",textDecoration:"underline",textUnderlineOffset:"2px"}}
-                            >
-                              🧭 Verify Sign on Street View →
-                            </a>
-                          ) : null}
                         </div>
                       );
                     })}
@@ -3223,15 +3184,6 @@ export default function App() {
                                 {ev.distance && ` · ${ev.distance} away`}
                               </div>
                               {ev.parkingImpacted && <span className="ev-impact">⚠ Parking may be impacted</span>}
-                              {(ev.lat && ev.lng) && (
-                                <a
-                                  href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${ev.lat},${ev.lng}`}
-                                  target="_blank" rel="noopener noreferrer"
-                                  style={{display:"inline-block",marginTop:8,fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".06em",textDecoration:"underline",textUnderlineOffset:"2px"}}
-                                >
-                                  🧭 View Location on Street View →
-                                </a>
-                              )}
                             </div>
                           );
                         })}
