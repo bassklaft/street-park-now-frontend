@@ -8,6 +8,33 @@ const GOOGLE_KEY = import.meta.env?.VITE_GOOGLE_MAPS_KEY || "";
 // addresses, sorted by Google's ranking which is biased by `location`+`radius`
 // when the user's coordinates are known. `origin` enables distance_meters in
 // each prediction, so we can render "1.3 km" next to each suggestion.
+// Strip unit / apt / suite / floor / # patterns from an address string so
+// they don't bias the geocoder. Handles comma-prefixed forms too:
+//   "395 Leonard St, Unit 333"  → "395 Leonard St"
+//   "395 Leonard St #333"       → "395 Leonard St"
+//   "395 Leonard St Apt 4B"     → "395 Leonard St"
+function stripUnit(input) {
+  if (!input) return "";
+  // Order matters in the alternation: longer words (apartment, floor) must
+  // come before their prefixes (apt, fl) or the prefix will match first and
+  // leave the tail ("oor") unconsumed. Also anchor with \b at both ends.
+  const UNIT_WORD = "(?:apartment|apt|unit|suite|ste|floor|fl|rm|room)";
+  return String(input)
+    // Comma-prefixed: ", Unit 333" — remove the whole fragment, leading comma included.
+    .replace(new RegExp(`,\\s*${UNIT_WORD}\\b\\.?\\s*[\\w-]+`, "gi"), "")
+    .replace(/,\s*#\s*[\w-]+/g, "")
+    // Non-prefixed: "Unit 333" / "#333" / "Apt 4B" anywhere.
+    .replace(new RegExp(`\\b${UNIT_WORD}\\b\\.?\\s*[\\w-]+`, "gi"), "")
+    .replace(/#\s*[\w-]+/g, "")
+    // Leftover punctuation/whitespace cleanup.
+    .replace(/\s+,/g, ",")       // " , Brooklyn" -> ", Brooklyn"
+    .replace(/,\s*,/g, ",")
+    .replace(/^[,\s]+/, "")      // leading comma/space when unit was at the start
+    .replace(/,\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function fmtDistance(m) {
   if (m == null || isNaN(m)) return "";
   if (m < 1000) return `${Math.round(m)} m`;
@@ -54,16 +81,11 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
     if (!value || value.trim().length < 2) { setPredictions([]); return; }
     debounceRef.current = setTimeout(() => {
       if (!serviceRef.current || !window.google?.maps) return;
-      // Strip unit/apt/suite/floor markers before sending to Google. These
-      // confuse the ranker: "395 Leonard St Unit 333" was resolving to
-      // Tribeca instead of Williamsburg because Google matched on "333"
-      // heavily. The backend /api/geocode already strips these; doing it
-      // client-side too keeps autocomplete predictions consistent.
-      const cleaned = value
-        .replace(/\b(apt|apartment|unit|suite|ste|fl|floor|rm|room)\b\s*[\w-]*/gi, "")
-        .replace(/#\s*[\w-]+/g, "")
-        .replace(/\s{2,}/g, " ")
-        .trim();
+      // Strip unit/apt/suite/floor markers — including comma-prefixed forms
+      // like "395 Leonard St, Unit 333" and hash forms like "395 Leonard #333"
+      // — so Google's ranker doesn't weight the unit number as a disambiguator
+      // and send "395 Leonard Unit 333" to Tribeca instead of Williamsburg.
+      const cleaned = stripUnit(value);
       const req = {
         input: cleaned || value,
         componentRestrictions: { country: ["us", "ca"] },
@@ -760,47 +782,47 @@ function HeatMap({ userLat, userLng, onStreetClick, liveTracking, canLiveTrack, 
       dataPromise.then(data => drawPolylines(map, data));
 
       // Point-restriction dots — fetch once per mount, render as small
-      // colored circles at each sign location. Only visible when the map
-      // is zoomed past level 15 so they don't clutter the zoomed-out view.
+      // colored circles at each sign location. Only show the high-stakes
+      // categories (fire zones + tow-away) to avoid the hundreds of
+      // "no parking anytime" and bus-stop dots that clutter the view.
+      // Zoom-gated at level 16+ so they don't appear in the default view.
+      const POINT_TYPES_SHOWN = new Set(["fire_zone", "tow_away"]);
       const POINT_COLORS = {
-        fire_zone:         "#E53E3E", // red
-        tow_away:          "#E53E3E",
-        no_parking_always: "#DD6B20", // orange
-        bus_stop:          "#3182CE", // blue
+        fire_zone: "#E53E3E",
+        tow_away:  "#E53E3E",
       };
       const POINT_LABELS = {
-        fire_zone:         "🚒 Fire Zone",
-        tow_away:          "🚨 Tow-Away",
-        no_parking_always: "⛔ No Parking Anytime",
-        bus_stop:          "🚌 Bus Stop",
+        fire_zone: "🚒 Fire Zone",
+        tow_away:  "🚨 Tow-Away",
       };
+      const ZOOM_THRESHOLD = 16;
       fetch(`${API}/api/point-restrictions?lat=${userLat}&lng=${userLng}`)
         .then(r => r.ok ? r.json() : [])
         .then(points => {
           if (!alive || !Array.isArray(points) || !points.length) return;
-          const initiallyVisible = (map.getZoom() || 0) >= 15;
+          const initiallyVisible = (map.getZoom() || 0) >= ZOOM_THRESHOLD;
           for (const p of points) {
-            const color = POINT_COLORS[p.type] || "#888888";
+            if (!POINT_TYPES_SHOWN.has(p.type)) continue;
+            const color = POINT_COLORS[p.type] || "#E53E3E";
             const dot = new window.google.maps.Marker({
               position: { lat: p.lat, lng: p.lng },
               map: initiallyVisible ? map : null,
               icon: {
                 path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 4,
+                scale: 2.5,
                 fillColor: color,
-                fillOpacity: 0.95,
+                fillOpacity: 0.9,
                 strokeColor: "#000",
-                strokeWeight: 0.5,
+                strokeWeight: 0.4,
               },
               title: `${POINT_LABELS[p.type] || p.type} — ${p.description}`,
               zIndex: 4,
             });
             pointMarkersRef.current.push(dot);
           }
-          // Toggle dot visibility on zoom changes. <15 hides all; >=15 shows.
           const toggleDots = () => {
             const z = map.getZoom() || 0;
-            const m = z >= 15 ? map : null;
+            const m = z >= ZOOM_THRESHOLD ? map : null;
             pointMarkersRef.current.forEach(d => d.setMap(m));
           };
           map.addListener("zoom_changed", toggleDots);
