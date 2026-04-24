@@ -554,8 +554,10 @@ function CoverageMap({ onCityClick }) {
         })
         .catch(() => console.log("GeoJSON failed to load"));
 
-      // Add neighborhood markers — name shows on click only
-      COVERED_CITIES.forEach(city => {
+      // Add neighborhood markers — tapping the marker opens the InfoWindow;
+      // the "Tap to search" button inside fires onCityClick. Two-step action
+      // so users can dismiss the popup without being auto-searched.
+      COVERED_CITIES.forEach((city, idx) => {
         const marker = new window.google.maps.Marker({
           position: { lat: city.lat, lng: city.lng },
           map,
@@ -569,12 +571,32 @@ function CoverageMap({ onCityClick }) {
           },
           title: city.name,
         });
+        // Stable DOM id per marker so the domready handler can re-bind its
+        // click listener each time the InfoWindow opens.
+        const btnId = `spn-mkr-${idx}`;
         const info = new window.google.maps.InfoWindow({
-          content: `<div style="font-family:monospace;font-size:12px;color:#000;padding:2px 6px"><b>${city.name}</b><br><span style="color:#555">Tap to search</span></div>`
+          content: `
+            <div style="font-family:monospace;font-size:12px;color:#000;padding:4px 6px;min-width:120px">
+              <div style="font-weight:700;margin-bottom:4px">${city.name.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</div>
+              <button id="${btnId}" style="
+                background:#F7C948;border:none;color:#000;
+                font-family:monospace;font-size:11px;font-weight:700;
+                padding:6px 10px;cursor:pointer;letter-spacing:.08em;
+                border-radius:2px;text-transform:uppercase;width:100%;
+              ">Search this neighborhood →</button>
+            </div>`,
         });
         marker.addListener("click", () => {
           info.open(map, marker);
-          if (onCityClick) onCityClick(city);
+        });
+        info.addListener("domready", () => {
+          const btn = document.getElementById(btnId);
+          if (btn) {
+            btn.onclick = () => {
+              info.close();
+              if (onCityClick) onCityClick(city);
+            };
+          }
         });
       });
 
@@ -1886,7 +1908,7 @@ export default function App() {
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              {homeMapCoords ? "🔥 LIVE PARKING HEAT MAP · TAP A STREET TO SEARCH" : "🗺 CITIES WE COVER · TAP A CITY OR USE SEARCH BAR"}
+              {homeMapCoords ? "🔥 LIVE PARKING HEAT MAP · TAP A STREET TO SEARCH" : "🟡 NEIGHBORHOODS WE COVER · TAP A NEIGHBORHOOD OR USE SEARCH BAR"}
             </div>
             {homeMapCoords ? (
               <HeatMap
