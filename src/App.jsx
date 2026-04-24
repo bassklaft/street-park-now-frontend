@@ -1742,7 +1742,13 @@ export default function App() {
 
   // Derived values (not hooks)
   const today        = todayAbbr();
+  const DAY_SEQ      = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const tomorrow     = DAY_SEQ[(new Date().getDay()+1)%7];
+  const in2days      = DAY_SEQ[(new Date().getDay()+2)%7];
+  const in3days      = DAY_SEQ[(new Date().getDay()+3)%7];
   const cleanToday   = cleaning.some(c => c.days?.includes(today));
+  // Earliest cleaning time today — shown in section header "MOVE YOUR CAR BY …"
+  const todayCleanTime = cleaning.find(c => c.days?.includes(today))?.time || "";
   const aspOff       = asp?.suspended;
   const wxNow        = weather?.current;
   const wxDaily      = weather?.daily;
@@ -2377,19 +2383,46 @@ export default function App() {
 
               {/* Cleaning */}
               <div className="sec" style={{position:"relative"}}>
-                <div className="sec-hd">🧹 Street Cleaning {cleaning.length > 0 && <span className="badge">{cleaning.length}</span>}</div>
+                <div className="sec-hd">
+                  🧹 Street Cleaning
+                  {cleanToday && todayCleanTime && (
+                    <span style={{fontFamily:"var(--mono)",fontSize:".7rem",color:"var(--red)",marginLeft:8,letterSpacing:".08em"}}>
+                      · MOVE YOUR CAR BY {todayCleanTime}
+                    </span>
+                  )}
+                  {cleaning.length > 0 && <span className="badge">{cleaning.length}</span>}
+                </div>
                 {isMulti && <div className="sec-note">Showing {locData.isPark ? "all bordering streets" : locData.isNeighborhood ? "all streets in this neighborhood" : locData.isGPS ? "nearby streets · closest first" : "streets in this zip"}</div>}
                 {cleaning.length === 0 ? <div className="empty">No street cleaning regulations found for this block.</div>
                   : cleaning.map((c, i) => {
                     const isBlurred = !Auth.isLoggedIn() && i >= 2;
+                    const hasToday    = c.days?.includes(today);
+                    const hasUpcoming = !hasToday && c.days?.some(d => d===tomorrow || d===in2days || d===in3days);
+                    // Status banner per card — replaces the plain time string.
+                    const statusLabel = hasToday    ? `🚫 NO PARKING ${c.time || ""}`.trim()
+                                      : hasUpcoming ? `⚠️ NO PARKING ${c.time || ""}`.trim()
+                                      : c.days?.length ? `✅ SAFE TO PARK NOW`
+                                      : c.time ? c.time : "";
+                    const statusColor = hasToday    ? "var(--red)"
+                                      : hasUpcoming ? "var(--yellow)"
+                                      : "#38A169"; // green
                     return (
                       <div key={i} style={{position:"relative"}}>
-                        <div className={`clean-card ${c.days?.includes(today) ? "today" : ""}`} style={isBlurred ? {filter:"blur(4px)",userSelect:"none",pointerEvents:"none"} : {}}>
-                          {c.days?.includes(today) && <span className="today-tag">⚠ CLEANING TODAY</span>}
+                        <div className={`clean-card ${hasToday ? "today" : ""}`} style={isBlurred ? {filter:"blur(4px)",userSelect:"none",pointerEvents:"none"} : {}}>
+                          {hasToday && <span className="today-tag">⚠ CLEANING TODAY</span>}
                           {isMulti && c.street && <div className="street-lbl">{c.street}</div>}
                           {c.side && <div className="side-tag">{c.side === "L" ? "Left / Even" : c.side === "R" ? "Right / Odd" : c.side}</div>}
                           <div className="chips">{DAYS.map(d => <span key={d} className={`chip ${c.days?.includes(d) ? "on" : ""}`}>{d}</span>)}</div>
-                          {c.time && <div className="clean-time">{c.time}</div>}
+                          {statusLabel && (
+                            <div style={{fontFamily:"var(--display)",fontSize:"1.35rem",letterSpacing:".04em",color:statusColor,marginTop:8,lineHeight:1.1}}>
+                              {statusLabel}
+                            </div>
+                          )}
+                          {(hasToday || hasUpcoming) && (
+                            <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",letterSpacing:".03em",marginTop:4}}>
+                              Move your car before this window or risk a ticket.
+                            </div>
+                          )}
                           {c.upcomingDates?.length > 0 && (
                             <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:5}}>
                               {c.upcomingDates.map((d, di) => (
