@@ -49,6 +49,7 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
   const sessionTokenRef = useRef(null);
   const debounceRef = useRef(null);
   const [predictions, setPredictions] = useState([]);
+  const [nearbyBusinesses, setNearbyBusinesses] = useState([]);
   const [focused, setFocused] = useState(false);
 
   // Boot Google Maps + Places services
@@ -78,7 +79,7 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
   // Fetch predictions (debounced) whenever the input changes
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (!value || value.trim().length < 2) { setPredictions([]); return; }
+    if (!value || value.trim().length < 2) { setPredictions([]); setNearbyBusinesses([]); return; }
     debounceRef.current = setTimeout(() => {
       // 80ms is enough to coalesce fast typists' keystrokes without making
       // the dropdown feel sluggish. Autocomplete calls are cheap.
@@ -118,6 +119,39 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
           setPredictions([]);
         }
       });
+
+      // Parallel: look for real business locations near the user matching
+      // the typed keyword. Chains like "NAYA" should show every nearby
+      // branch sorted by distance, the way Google Maps does it — not a
+      // single "See locations" placeholder.
+      if (placesRef.current && userLat && userLng && cleaned.length >= 2) {
+        const center = new window.google.maps.LatLng(userLat, userLng);
+        placesRef.current.nearbySearch({
+          location: center,
+          rankBy: window.google.maps.places.RankBy.DISTANCE,
+          keyword: cleaned,
+        }, (results, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && Array.isArray(results)) {
+            // Compute distance client-side (nearbySearch doesn't ship it)
+            // and keep only places with a real geometry.
+            const enriched = results
+              .filter(r => r.place_id && r.geometry?.location)
+              .map(r => ({
+                place_id: r.place_id,
+                name: r.name || "",
+                vicinity: r.vicinity || r.formatted_address || "",
+                lat: r.geometry.location.lat(),
+                lng: r.geometry.location.lng(),
+                distance_meters: haversineKm(userLat, userLng, r.geometry.location.lat(), r.geometry.location.lng()) * 1000,
+              }));
+            setNearbyBusinesses(enriched);
+          } else {
+            setNearbyBusinesses([]);
+          }
+        });
+      } else {
+        setNearbyBusinesses([]);
+      }
     }, 80);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [value, userLat, userLng]);
@@ -140,8 +174,47 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
     });
   }, [onPlaceSelect]);
 
-  const showPredictions = focused && predictions.length > 0;
-  const showGpsHint = focused && showDropdown && predictions.length === 0;
+  // Merge nearbySearch businesses + autocomplete predictions into one
+  // distance-sorted list. Dedupe by place_id. Nearby business hits always
+  // carry a real distance; autocomplete predictions carry distance_meters
+  // only when origin was provided. Entries without distance fall to the end.
+  const mergedItems = (() => {
+    const seen = new Set();
+    const out = [];
+    const push = (item) => {
+      if (!item.place_id || seen.has(item.place_id)) return;
+      seen.add(item.place_id);
+      out.push(item);
+    };
+    for (const b of nearbyBusinesses) {
+      push({
+        place_id: b.place_id,
+        kind: "business",
+        mainText: b.name,
+        secondaryText: b.vicinity,
+        distance_meters: b.distance_meters,
+      });
+    }
+    for (const p of predictions) {
+      push({
+        place_id: p.place_id,
+        kind: "prediction",
+        mainText: p.structured_formatting?.main_text || p.description,
+        secondaryText: p.structured_formatting?.secondary_text || "",
+        distance_meters: p.distance_meters ?? null,
+      });
+    }
+    out.sort((a, b) => {
+      if (a.distance_meters == null && b.distance_meters == null) return 0;
+      if (a.distance_meters == null) return 1;
+      if (b.distance_meters == null) return -1;
+      return a.distance_meters - b.distance_meters;
+    });
+    return out.slice(0, 7);
+  })();
+
+  const showPredictions = focused && mergedItems.length > 0;
+  const showGpsHint = focused && showDropdown && mergedItems.length === 0;
 
   return (
     <div style={{position:"relative",flex:1}}>
@@ -158,20 +231,20 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
       />
       {showPredictions && (
         <div className="search-dropdown">
-          {predictions.slice(0, 7).map(p => (
+          {mergedItems.map(p => (
             <div
               key={p.place_id}
               className="search-dropdown-item"
-              onMouseDown={(e) => { e.preventDefault(); selectPrediction(p); }}
+              onMouseDown={(e) => { e.preventDefault(); selectPrediction({ place_id: p.place_id, structured_formatting: { main_text: p.mainText } }); }}
               style={{alignItems:"center"}}
             >
               <div style={{flex:1,minWidth:0,paddingRight:10}}>
                 <div style={{fontFamily:"var(--body)",fontSize:"1.1rem",fontWeight:600,color:"var(--white)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {p.structured_formatting?.main_text || p.description}
+                  {p.mainText}
                 </div>
-                {p.structured_formatting?.secondary_text && (
+                {p.secondaryText && (
                   <div style={{fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--muted)",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                    {p.structured_formatting.secondary_text}
+                    {p.secondaryText}
                   </div>
                 )}
               </div>
