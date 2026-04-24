@@ -1576,6 +1576,311 @@ function SavedLocationsPage({ onDone, onSelectLocation, userLat, userLng }) {
   );
 }
 
+function RecordsRequestPage({ onBack, user }) {
+  const [tab, setTab] = useState("draft");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [dataWanted, setDataWanted] = useState("");
+  const [reqName, setReqName] = useState(user?.name || "");
+  const [reqEmail, setReqEmail] = useState(user?.email || "");
+  const [drafting, setDrafting] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const [draftErr, setDraftErr] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const [responseText, setResponseText] = useState("");
+  const [origReq, setOrigReq] = useState("");
+  const [summarizing, setSummarizing] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [sumErr, setSumErr] = useState(null);
+
+  const PRESETS = [
+    "Street cleaning / sweeping schedules — all routes, days, times, and zones (CSV or GeoJSON preferred)",
+    "Posted parking sign inventory — location, text, and install date of every parking-regulation sign (shapefile preferred)",
+    "Residential parking permit zone boundaries and rules (GIS format preferred)",
+    "Parking citation data for the last 12 months — location, violation code, time (CSV preferred, PII redacted)",
+    "Construction, parade, and film permits issued for the last 6 months — affected streets, dates, hours",
+    "Current municipal ordinances governing on-street parking, street sweeping, and overnight parking",
+    "Tow records / impound data by location for the last 12 months (CSV preferred, PII redacted)",
+  ];
+
+  async function handleDraft() {
+    if (!city.trim() || !state.trim() || !dataWanted.trim()) {
+      setDraftErr("City, state, and records-wanted are required.");
+      return;
+    }
+    setDrafting(true); setDraftErr(null); setDraft(null);
+    try {
+      const r = await fetch(`${API}/api/records-request/draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city, state, dataWanted, userName: reqName, userEmail: reqEmail }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Draft failed");
+      setDraft(data);
+    } catch (e) { setDraftErr(e.message); }
+    finally { setDrafting(false); }
+  }
+
+  async function handleSummarize() {
+    if (!responseText.trim() || responseText.trim().length < 30) {
+      setSumErr("Paste the agency's response (at least a few sentences).");
+      return;
+    }
+    setSummarizing(true); setSumErr(null); setSummary(null);
+    try {
+      const r = await fetch(`${API}/api/records-request/summarize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responseText, originalRequest: origReq }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Summarize failed");
+      setSummary(data);
+    } catch (e) { setSumErr(e.message); }
+    finally { setSummarizing(false); }
+  }
+
+  async function copyLetter() {
+    if (!draft?.letter) return;
+    try {
+      await navigator.clipboard.writeText(`Subject: ${draft.subject}\n\n${draft.letter}`);
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  function mailtoLink() {
+    if (!draft) return "#";
+    const to = draft.agencyEmail || "";
+    const sub = encodeURIComponent(draft.subject || "Public Records Request");
+    const body = encodeURIComponent(draft.letter || "");
+    return `mailto:${to}?subject=${sub}&body=${body}`;
+  }
+
+  const inputStyle = {
+    width:"100%",background:"#0f0f0f",border:"1px solid #333",color:"var(--white)",
+    fontFamily:"var(--mono)",fontSize:".75rem",padding:"10px 12px",borderRadius:4,
+    letterSpacing:".02em",boxSizing:"border-box",
+  };
+  const labelStyle = {fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",letterSpacing:".08em",marginBottom:6,textTransform:"uppercase"};
+
+  return (
+    <div className="dash" style={{maxWidth:680,paddingBottom:60}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"20px 0 16px",borderBottom:"1px solid #1f1f1f",marginBottom:20}}>
+        <button onClick={onBack} style={{background:"none",border:"1px solid #333",color:"var(--white)",fontFamily:"var(--mono)",fontSize:".6rem",padding:"5px 12px",cursor:"pointer"}}>← BACK</button>
+        <div style={{fontFamily:"var(--display)",fontSize:"1.5rem",letterSpacing:".06em"}}>PUBLIC RECORDS</div>
+      </div>
+
+      <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",lineHeight:1.7,letterSpacing:".02em",marginBottom:18}}>
+        Every US state has a public-records law (California Public Records Act, NY FOIL, Illinois FOIA, etc.). Cities are required to hand over parking-related data when you ask correctly. This tool drafts a properly cited, ready-to-send request — and summarizes the response when it comes back.
+      </div>
+
+      <div style={{display:"flex",gap:0,borderBottom:"1px solid #1f1f1f",marginBottom:20}}>
+        <button
+          onClick={() => setTab("draft")}
+          style={{flex:1,background:"none",border:"none",borderBottom:tab==="draft"?"2px solid var(--yellow)":"2px solid transparent",color:tab==="draft"?"var(--yellow)":"var(--muted)",fontFamily:"var(--mono)",fontSize:".68rem",letterSpacing:".1em",padding:"10px 0",cursor:"pointer",textTransform:"uppercase"}}
+        >
+          1. Draft Request
+        </button>
+        <button
+          onClick={() => setTab("summarize")}
+          style={{flex:1,background:"none",border:"none",borderBottom:tab==="summarize"?"2px solid var(--yellow)":"2px solid transparent",color:tab==="summarize"?"var(--yellow)":"var(--muted)",fontFamily:"var(--mono)",fontSize:".68rem",letterSpacing:".1em",padding:"10px 0",cursor:"pointer",textTransform:"uppercase"}}
+        >
+          2. Summarize Response
+        </button>
+      </div>
+
+      {tab === "draft" && (
+        <div>
+          <div style={{marginBottom:14}}>
+            <div style={labelStyle}>City</div>
+            <input value={city} onChange={(e)=>setCity(e.target.value)} placeholder="e.g. Sacramento" style={inputStyle} />
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={labelStyle}>State</div>
+            <input value={state} onChange={(e)=>setState(e.target.value)} placeholder="e.g. California" style={inputStyle} />
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={labelStyle}>Records You Want</div>
+            <textarea
+              value={dataWanted}
+              onChange={(e)=>setDataWanted(e.target.value)}
+              placeholder="Describe the records — be specific. Format preferences (CSV, GeoJSON, PDF) help."
+              style={{...inputStyle,minHeight:90,resize:"vertical",fontFamily:"var(--mono)"}}
+            />
+            <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:6}}>
+              {PRESETS.map((p, i) => (
+                <button
+                  key={i}
+                  onClick={()=>setDataWanted(p)}
+                  style={{background:"#151515",border:"1px solid #2a2a2a",color:"var(--muted)",fontFamily:"var(--mono)",fontSize:".55rem",padding:"5px 9px",borderRadius:3,cursor:"pointer",letterSpacing:".03em"}}
+                >
+                  + {p.split("—")[0].trim()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+            <div>
+              <div style={labelStyle}>Your Name</div>
+              <input value={reqName} onChange={(e)=>setReqName(e.target.value)} placeholder="Jane Doe" style={inputStyle} />
+            </div>
+            <div>
+              <div style={labelStyle}>Your Email</div>
+              <input value={reqEmail} onChange={(e)=>setReqEmail(e.target.value)} placeholder="you@example.com" style={inputStyle} />
+            </div>
+          </div>
+
+          {draftErr && <div style={{color:"var(--red)",fontFamily:"var(--mono)",fontSize:".65rem",marginBottom:12}}>{draftErr}</div>}
+
+          <button
+            onClick={handleDraft}
+            disabled={drafting}
+            style={{width:"100%",background:"var(--yellow)",border:"none",color:"#000",fontFamily:"var(--display)",fontSize:".85rem",letterSpacing:".08em",padding:"14px",cursor:drafting?"default":"pointer",borderRadius:4,fontWeight:700,opacity:drafting?0.6:1}}
+          >
+            {drafting ? "DRAFTING…" : "📜 DRAFT REQUEST"}
+          </button>
+
+          {draft && (
+            <div style={{marginTop:24,padding:"18px 16px",background:"#0c0c0c",border:"1px solid #2a2a2a",borderRadius:6}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:4,textTransform:"uppercase"}}>Agency</div>
+              <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)",marginBottom:10}}>{draft.agencyName}</div>
+              {draft.agencyEmail && <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",marginBottom:4}}>📧 {draft.agencyEmail}</div>}
+              {draft.agencyAddress && <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",marginBottom:10}}>📮 {draft.agencyAddress}</div>}
+              <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:4,textTransform:"uppercase",marginTop:12}}>Statute</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)",lineHeight:1.5,marginBottom:10}}>{draft.statute}</div>
+              {draft.responseDeadlineDays > 0 && (
+                <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",marginBottom:12}}>Agency must respond within <span style={{color:"var(--yellow)"}}>{draft.responseDeadlineDays} days</span>.</div>
+              )}
+              <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:4,textTransform:"uppercase",marginTop:8}}>Subject</div>
+              <div style={{fontFamily:"var(--body)",fontSize:".9rem",color:"var(--white)",marginBottom:12}}>{draft.subject}</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:4,textTransform:"uppercase"}}>Letter</div>
+              <pre style={{fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--white)",whiteSpace:"pre-wrap",lineHeight:1.6,background:"#080808",padding:12,borderRadius:4,border:"1px solid #1f1f1f",margin:0}}>
+{draft.letter}
+              </pre>
+              <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+                <button onClick={copyLetter} style={{flex:"1 1 140px",background:"#1a1a1a",border:"1px solid #333",color:"var(--white)",fontFamily:"var(--mono)",fontSize:".65rem",padding:"10px",borderRadius:4,cursor:"pointer",letterSpacing:".05em"}}>
+                  {copied ? "✓ COPIED" : "📋 COPY LETTER"}
+                </button>
+                <a href={mailtoLink()} style={{flex:"1 1 140px",background:"var(--yellow)",color:"#000",fontFamily:"var(--mono)",fontSize:".65rem",padding:"10px",borderRadius:4,textAlign:"center",textDecoration:"none",letterSpacing:".05em",fontWeight:700}}>
+                  ✉ OPEN IN EMAIL
+                </a>
+              </div>
+              {Array.isArray(draft.tips) && draft.tips.length > 0 && (
+                <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid #1f1f1f"}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:6,textTransform:"uppercase"}}>Tips</div>
+                  {draft.tips.map((t, i) => (
+                    <div key={i} style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",lineHeight:1.6,marginBottom:4}}>• {t}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"#444",lineHeight:1.7,marginTop:24,paddingTop:16,borderTop:"1px solid #1f1f1f"}}>
+            AI-generated drafts are a starting point, not legal advice. Review the letter and confirm the agency before sending. Street Park Now is not your attorney.
+          </div>
+        </div>
+      )}
+
+      {tab === "summarize" && (
+        <div>
+          <div style={{marginBottom:14}}>
+            <div style={labelStyle}>Original Request (optional, for context)</div>
+            <textarea
+              value={origReq}
+              onChange={(e)=>setOrigReq(e.target.value)}
+              placeholder="What you asked for — helps the summarizer evaluate completeness."
+              style={{...inputStyle,minHeight:70,resize:"vertical",fontFamily:"var(--mono)"}}
+            />
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={labelStyle}>Agency Response (paste the full email / letter)</div>
+            <textarea
+              value={responseText}
+              onChange={(e)=>setResponseText(e.target.value)}
+              placeholder="Paste the agency's response verbatim here."
+              style={{...inputStyle,minHeight:180,resize:"vertical",fontFamily:"var(--mono)"}}
+            />
+          </div>
+
+          {sumErr && <div style={{color:"var(--red)",fontFamily:"var(--mono)",fontSize:".65rem",marginBottom:12}}>{sumErr}</div>}
+
+          <button
+            onClick={handleSummarize}
+            disabled={summarizing}
+            style={{width:"100%",background:"var(--yellow)",border:"none",color:"#000",fontFamily:"var(--display)",fontSize:".85rem",letterSpacing:".08em",padding:"14px",cursor:summarizing?"default":"pointer",borderRadius:4,fontWeight:700,opacity:summarizing?0.6:1}}
+          >
+            {summarizing ? "READING…" : "🔍 SUMMARIZE RESPONSE"}
+          </button>
+
+          {summary && (
+            <div style={{marginTop:24,padding:"18px 16px",background:"#0c0c0c",border:"1px solid #2a2a2a",borderRadius:6}}>
+              <div style={{display:"inline-block",fontFamily:"var(--mono)",fontSize:".58rem",letterSpacing:".12em",padding:"3px 9px",borderRadius:3,background:
+                  summary.status === "fulfilled" ? "rgba(56,161,105,0.2)"
+                : summary.status === "denied"    ? "rgba(229,62,62,0.2)"
+                : "rgba(247,201,72,0.2)",
+                color:
+                  summary.status === "fulfilled" ? "var(--green)"
+                : summary.status === "denied"    ? "var(--red)"
+                : "var(--yellow)",
+                textTransform:"uppercase",marginBottom:12}}>
+                {summary.status?.replace(/_/g," ")}
+              </div>
+              <div style={{fontFamily:"var(--body)",fontSize:".95rem",color:"var(--white)",lineHeight:1.5,marginBottom:14}}>{summary.summary}</div>
+
+              {Array.isArray(summary.keyFindings) && summary.keyFindings.length > 0 && (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:6,textTransform:"uppercase"}}>Key Findings</div>
+                  {summary.keyFindings.map((k, i) => (
+                    <div key={i} style={{fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--white)",lineHeight:1.6,marginBottom:4}}>• {k}</div>
+                  ))}
+                </div>
+              )}
+
+              {Array.isArray(summary.redactionsOrExemptions) && summary.redactionsOrExemptions.length > 0 && (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--red)",letterSpacing:".1em",marginBottom:6,textTransform:"uppercase"}}>Redactions / Exemptions</div>
+                  {summary.redactionsOrExemptions.map((k, i) => (
+                    <div key={i} style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",lineHeight:1.6,marginBottom:4}}>• {k}</div>
+                  ))}
+                </div>
+              )}
+
+              {summary.feesOrCosts && (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:6,textTransform:"uppercase"}}>Fees</div>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--white)",lineHeight:1.6}}>{summary.feesOrCosts}</div>
+                </div>
+              )}
+
+              {Array.isArray(summary.nextSteps) && summary.nextSteps.length > 0 && (
+                <div style={{marginBottom:6}}>
+                  <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--yellow)",letterSpacing:".1em",marginBottom:6,textTransform:"uppercase"}}>Next Steps</div>
+                  {summary.nextSteps.map((k, i) => (
+                    <div key={i} style={{fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--white)",lineHeight:1.6,marginBottom:4}}>→ {k}</div>
+                  ))}
+                </div>
+              )}
+
+              {summary.appealable && (
+                <div style={{marginTop:12,padding:"8px 10px",background:"rgba(229,62,62,0.08)",border:"1px solid rgba(229,62,62,0.25)",borderRadius:3,fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--red)",letterSpacing:".04em"}}>
+                  ⚖ This response appears appealable under the governing statute. Ask the agency's records officer for the appeal procedure, or contact your state attorney general's public-records ombudsman.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"#444",lineHeight:1.7,marginTop:24,paddingTop:16,borderTop:"1px solid #1f1f1f"}}>
+            Don't paste responses that contain your own sensitive info. Claude reads the text to summarize it, but your text is not used for training.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
 export default function App() {
   // All useState hooks first — no exceptions
@@ -2005,6 +2310,7 @@ export default function App() {
                 {user && (
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); openPaywall(); }}>Upgrade</div>
                 )}
+                <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("records"); }}>📜 Records Request</div>
                 <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("faq"); }}>FAQ</div>
                 {user && (
                   <div className="menu-item" style={{color:"var(--red)"}} onClick={() => { setShowUserMenu(false); handleLogout(); }}>Sign Out</div>
@@ -2386,6 +2692,11 @@ export default function App() {
             Street Park Now is provided for informational purposes only. We make no warranties regarding the accuracy, completeness, or timeliness of any information. Street Park Now is not liable for any parking fines, towing charges, or other penalties. Always check posted street signs — they are the legal authority.
           </div>
         </div>
+      )}
+
+      {/* PUBLIC RECORDS REQUEST PAGE */}
+      {phase === "records" && (
+        <RecordsRequestPage onBack={resetHome} user={user} />
       )}
 
       {/* SAVED LOCATIONS PAGE */}
