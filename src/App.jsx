@@ -15,7 +15,7 @@ function fmtDistance(m) {
   return `${Math.round(m/1000)} km`;
 }
 
-function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter, onGPSClick, showDropdown, userLat, userLng }) {
+function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter, onGPSClick, showDropdown, userLat, userLng, onSavedClick, canUseSaved }) {
   const inputRef = useRef(null);
   const serviceRef = useRef(null);
   const placesRef = useRef(null);
@@ -159,6 +159,23 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
               <div className="search-dropdown-sub">Automatically find streets near you</div>
             </div>
           </div>
+          {onSavedClick && (
+            <div
+              className="search-dropdown-item"
+              style={{borderTop:"1px solid #1f1f1f",opacity:canUseSaved?1:0.55}}
+              onMouseDown={onSavedClick}
+            >
+              <span style={{marginRight:10,fontSize:"1.1rem"}}>{canUseSaved ? "📍" : "🔒"}</span>
+              <div>
+                <div className="search-dropdown-label">
+                  {canUseSaved ? "Saved Locations" : "Saved Locations — Unlimited+Save only"}
+                </div>
+                <div className="search-dropdown-sub">
+                  {canUseSaved ? "Pick from your saved spots" : "Upgrade to pin up to 10 locations"}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1461,9 +1478,14 @@ export default function App() {
   }, []);
 
   const resetHome = useCallback(() => {
+    // Explicit home nav clears everything that could trigger an auto-rerun
+    // or keep the home-page map in heatmap mode. spn_last_phase is cleared
+    // so a subsequent refresh stays on home rather than restoring results.
     localStorage.removeItem("spn_last_phase");
     setPhase("home"); setLocData(null); setSignedUp(false);
     setQuery(""); setSelectedEstab(null); setErr(null);
+    setHomeMapCoords(null);     // force the home-page map back to CoverageMap
+    setLiveTracking(false);
   }, []);
 
   const canSearch = useCallback(() => {
@@ -1616,16 +1638,14 @@ export default function App() {
 
   const handleSearchFocus = useCallback(() => {
     setSearchFocused(true);
-    // Request location when user taps search bar if not yet determined
+    // Request location when user taps search bar if not yet determined.
+    // We only update locationAllowed; setting homeMapCoords would switch the
+    // home-page map from CoverageMap to HeatMap, which the user wants to opt
+    // into explicitly (via the GPS or Saved Locations buttons).
     if (locationAllowed === null && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        ({ coords: { latitude, longitude } }) => {
-          setLocationAllowed(true);
-          setHomeMapCoords({ lat: latitude, lng: longitude });
-        },
-        () => {
-          setLocationAllowed(false);
-        }
+        () => { setLocationAllowed(true); },
+        () => { setLocationAllowed(false); }
       );
     }
   }, [locationAllowed, homeMapCoords]);
@@ -1715,29 +1735,14 @@ export default function App() {
       }
     }
 
+    // Detect GPS permission state for the search-bar GPS prompt, but do NOT
+    // setHomeMapCoords here — the home page should stay on CoverageMap by
+    // default. A refresh on home leaves the user on home; auto-switching to
+    // the local HeatMap would be an unwanted "auto-search" behavior.
     navigator.permissions?.query({ name: "geolocation" }).then(perm => {
-      if (perm.state === "granted") {
-        setLocationAllowed(true);
-        navigator.geolocation.getCurrentPosition(
-          ({ coords: { latitude: lat, longitude: lng } }) => {
-            setHomeMapCoords({ lat, lng });
-            fetchHeatmap(lat, lng); // prefetch heatmap data but don't navigate
-          },
-          () => {}
-        );
-      } else if (perm.state === "denied") {
-        setLocationAllowed(false);
-      }
-    }).catch(() => {
-      navigator.geolocation.getCurrentPosition(
-        ({ coords: { latitude: lat, longitude: lng } }) => {
-          setLocationAllowed(true);
-          setHomeMapCoords({ lat, lng });
-          fetchHeatmap(lat, lng);
-        },
-        () => { setLocationAllowed(false); }
-      );
-    });
+      if (perm.state === "granted")       setLocationAllowed(true);
+      else if (perm.state === "denied")   setLocationAllowed(false);
+    }).catch(() => {});
   }, []);
 
   // Derived values (not hooks)
@@ -1784,15 +1789,15 @@ export default function App() {
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); openAuth("login"); }}>Sign In</div>
                 )}
                 {user && (
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("account"); }}>Account</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("account"); }}>Account</div>
                 )}
                 {user?.tier === "unlimited" && (
-                  <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("saved"); }}>Saved Locations</div>
+                  <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("saved"); }}>Saved Locations</div>
                 )}
                 {user && (
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); openPaywall(); }}>Upgrade</div>
                 )}
-                <div className="menu-item" onClick={() => { setShowUserMenu(false); setPhase("faq"); }}>FAQ</div>
+                <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("faq"); }}>FAQ</div>
                 {user && (
                   <div className="menu-item" style={{color:"var(--red)"}} onClick={() => { setShowUserMenu(false); handleLogout(); }}>Sign Out</div>
                 )}
@@ -1845,6 +1850,15 @@ export default function App() {
                     showDropdown={searchFocused && !query}
                     userLat={coords?.lat || homeMapCoords?.lat}
                     userLng={coords?.lng || homeMapCoords?.lng}
+                    onSavedClick={user ? () => {
+                      if (user?.tier === "unlimited") {
+                        localStorage.removeItem("spn_last_phase");
+                        setPhase("saved");
+                      } else {
+                        openPaywall();
+                      }
+                    } : null}
+                    canUseSaved={user?.tier === "unlimited"}
                   />
                   <button onClick={handleSearch}>GO</button>
                 </div>
@@ -1857,6 +1871,44 @@ export default function App() {
               {err && <div className="err">⚠ {err}</div>}
             </div>
           </div>
+
+          {/* Recent Searches — logged-in users, last 5, one-tap rerun */}
+          {user && savedSearches.length > 0 && (
+            <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
+              <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
+                🕐 RECENT SEARCHES · TAP TO RE-RUN
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {savedSearches.slice(0, 5).map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => handlePlaceSelect({ lat: s.lat, lng: s.lng, label: s.label, formatted: s.label })}
+                    style={{
+                      background:"var(--g2)",border:"1px solid #2a2a2a",
+                      padding:"10px 14px",cursor:"pointer",textAlign:"left",
+                      display:"flex",alignItems:"center",gap:10,
+                      transition:"border-color .15s",
+                    }}
+                  >
+                    <span style={{fontSize:".9rem",flexShrink:0}}>📍</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontFamily:"var(--body)",fontSize:"1rem",color:"var(--white)",letterSpacing:".02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {s.label}
+                      </div>
+                      {(s.neighborhood || s.borough) && (
+                        <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)",marginTop:2,letterSpacing:".04em"}}>
+                          {[s.neighborhood, s.borough].filter(Boolean).join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--yellow)",letterSpacing:".06em",flexShrink:0}}>
+                      RE-RUN →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* MAP SECTION */}
           <div style={{width:"100%",maxWidth:560,padding:"20px 24px 0"}}>
