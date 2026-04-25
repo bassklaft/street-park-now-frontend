@@ -653,10 +653,14 @@ function CoverageMap({ onCityClick }) {
         mapTypeId: "roadmap",
         disableDefaultUI: true,
         gestureHandling: "cooperative",
+        backgroundColor: "#111111",
         styles: [
           { elementType: "geometry", stylers: [{ color: "#111111" }] },
           { elementType: "labels.text.fill", stylers: [{ color: "#555555" }] },
           { elementType: "labels.text.stroke", stylers: [{ color: "#111111" }] },
+          { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#111111" }] },
+          { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#111111" }] },
+          { featureType: "administrative", elementType: "geometry.fill", stylers: [{ color: "#111111" }] },
           { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#666666" }] },
           { featureType: "administrative.province", elementType: "geometry.stroke", stylers: [{ color: "#444444" }] },
           { featureType: "administrative.province", elementType: "geometry.fill", stylers: [{ color: "#111111" }] },
@@ -710,10 +714,10 @@ function CoverageMap({ onCityClick }) {
           const isCovered = COVERED_STATES.includes(name);
           return {
             fillColor: isCovered ? "#ffffff" : "#111111",
-            fillOpacity: isCovered ? 0.12 : 0,
+            fillOpacity: isCovered ? 0.12 : 0.95,
             strokeColor: isCovered ? "#ffffff" : "#333333",
             strokeWeight: isCovered ? 1 : 0.5,
-            strokeOpacity: isCovered ? 0.5 : 0.3,
+            strokeOpacity: isCovered ? 0.5 : 0.6,
           };
         });
       };
