@@ -2921,6 +2921,21 @@ export default function App() {
               <div className="loc-eyebrow">📍 {locData.isEstablishment ? "Search results" : "Your location"}</div>
               <div className="loc-name">{locData.label || locData.street}</div>
               <div className="loc-meta">{locData.isEstablishment ? `${locData.establishments?.length} locations · sorted by distance` : [locData.neighborhood,locData.borough].filter(Boolean).join(" · ") + " · Updated just now"}</div>
+              {/* Coverage disclaimer — NYC has the most complete real DOT
+                  sign data; Chicago has real permit zone data; everywhere
+                  else our coverage is partial. */}
+              {(() => {
+                const NYC_BOROUGHS = new Set(["brooklyn","manhattan","queens","bronx","staten island"]);
+                const cityLc = (locData.city || "").toLowerCase();
+                const borLc = (locData.borough || "").toLowerCase();
+                const isNYC = NYC_BOROUGHS.has(borLc) || NYC_BOROUGHS.has(cityLc);
+                if (isNYC) return null;
+                return (
+                  <div style={{marginTop:10,padding:"7px 10px",background:"rgba(247,201,72,0.08)",border:"1px solid rgba(247,201,72,0.3)",borderRadius:3,fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--yellow)",letterSpacing:".03em",lineHeight:1.5}}>
+                    ⚠️ Parking data for this city may be incomplete. Always check physical signs.
+                  </div>
+                );
+              })()}
               {locData.isGPS && Array.isArray(locData.nearbyStreets) && locData.nearbyStreets.length > 1 && (
                 <div style={{marginTop:8}}>
                   <button
@@ -3158,6 +3173,7 @@ export default function App() {
                   fire_zone:            { icon: "🚒", label: "Fire Zone",     color: "var(--red)" },
                   no_parking_always:    { icon: "⛔", label: "No Parking Anytime", color: "var(--red)" },
                   overnight_no_parking: { icon: "🌙", label: "Overnight No Parking", color: "var(--red)" },
+                  street_cleaning:      { icon: "🧹", label: "Street Cleaning", color: "var(--red)" },
                   bus_stop:             { icon: "🚌", label: "Bus Stop",      color: "var(--orange)" },
                   no_parking_hours:     { icon: "⏰", label: "No Parking (hours)", color: "var(--orange)" },
                   school_zone:          { icon: "🏫", label: "School Zone",   color: "var(--orange)" },
