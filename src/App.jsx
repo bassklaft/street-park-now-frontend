@@ -42,7 +42,7 @@ function fmtDistance(m) {
   return `${Math.round(m/1000)} km`;
 }
 
-function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter, onGPSClick, showDropdown, userLat, userLng, onSavedClick, canUseSaved }) {
+function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter, onGPSClick, showDropdown, userLat, userLng, onSavedClick, canUseSaved, onResultsChange }) {
   const inputRef = useRef(null);
   const serviceRef = useRef(null);
   const placesRef = useRef(null);
@@ -216,6 +216,29 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
   const showPredictions = focused && mergedItems.length > 0;
   const showGpsHint = focused && showDropdown && mergedItems.length === 0;
 
+  // Bubble up the first (closest) merged item so the parent's GO button
+  // and Enter handler can auto-select it instead of submitting raw text.
+  // Without this, typing a brand name like "Naya" and pressing GO sends
+  // the raw word to /api/geocode which (correctly) rejects it as
+  // not-an-address.
+  useEffect(() => {
+    if (onResultsChange) onResultsChange(mergedItems);
+  }, [mergedItems, onResultsChange]);
+
+  // Local Enter handler: auto-pick closest if dropdown has results;
+  // else bubble up to parent's onEnter for the legacy text-search path.
+  const handleEnter = useCallback(() => {
+    if (mergedItems.length > 0) {
+      const top = mergedItems[0];
+      selectPrediction({
+        place_id: top.place_id,
+        structured_formatting: { main_text: top.mainText },
+      });
+      return;
+    }
+    onEnter();
+  }, [mergedItems, selectPrediction, onEnter]);
+
   return (
     <div style={{position:"relative",flex:1}}>
       <input
@@ -226,7 +249,7 @@ function PlacesInput({ value, onChange, onPlaceSelect, onFocus, onBlur, onEnter,
         onChange={e => onChange(e.target.value)}
         onFocus={e => { setFocused(true); if (onFocus) onFocus(e); }}
         onBlur={e => { setTimeout(() => setFocused(false), 180); if (onBlur) onBlur(e); }}
-        onKeyDown={e => e.key === "Enter" && onEnter()}
+        onKeyDown={e => e.key === "Enter" && handleEnter()}
         style={{width:"100%",background:"transparent",border:"none",outline:"none",color:"var(--white)",fontFamily:"var(--mono)",fontSize:".9rem",padding:"16px 20px",letterSpacing:".04em",boxSizing:"border-box"}}
       />
       {showPredictions && (
@@ -1985,6 +2008,7 @@ export default function App() {
   const [showHistory,    setShowHistory]    = useState(false);
   const [homeMapCoords,  setHomeMapCoords]  = useState(null);
   const [searchFocused,  setSearchFocused]  = useState(false);
+  const [searchResults,  setSearchResults]  = useState([]);
   const [locationAllowed, setLocationAllowed] = useState(null);
   // Dedupe GPS requests so we only prompt once per session. The browser
   // itself remembers granted/denied across sessions — this ref just keeps
@@ -2142,6 +2166,29 @@ export default function App() {
     const q = query.trim();
     if (!q) return;
     if (!canSearch()) return;
+    // GO/Enter shortcut: when the autocomplete dropdown has merged
+    // results (chain businesses + address predictions sorted by
+    // distance), pick the closest one instead of geocoding the raw
+    // typed text. "Naya" → nearest NAYA branch, not a 404.
+    if (Array.isArray(searchResults) && searchResults.length > 0) {
+      const top = searchResults[0];
+      if (top.place_id && window.google?.maps?.places) {
+        try {
+          const svc = new window.google.maps.places.PlacesService(document.createElement("div"));
+          svc.getDetails({ placeId: top.place_id, fields: ["geometry","name","formatted_address"] }, (place, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+              handlePlaceSelect({
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng(),
+                label: place.name || top.mainText,
+                formatted: place.formatted_address,
+              });
+            }
+          });
+          return;
+        } catch (e) { /* fall through */ }
+      }
+    }
     tickSearch();
     setErr(null); setPhase("loading");
     try {
@@ -2439,6 +2486,7 @@ export default function App() {
                     onFocus={handleSearchFocus}
                     onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
                     onEnter={handleSearch}
+                    onResultsChange={setSearchResults}
                     onGPSClick={handleGPS}
                     showDropdown={searchFocused && !query}
                     userLat={coords?.lat || homeMapCoords?.lat}
