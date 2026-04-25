@@ -3225,52 +3225,83 @@ export default function App() {
 
               {/* Other Parking Restrictions — NYC only (nfid-uabd signs) */}
               {(() => {
-                const allRestrictions = Object.entries(restrictions || {})
-                  .flatMap(([street, arr]) => (arr || []).map(r => ({ ...r, street })));
-                if (allRestrictions.length === 0) return null;
                 const TYPE_META = {
-                  tow_away:             { icon: "🚨", label: "Tow-Away Zone", color: "var(--red)" },
-                  fire_zone:            { icon: "🚒", label: "Fire Zone",     color: "var(--red)" },
-                  no_parking_always:    { icon: "⛔", label: "No Parking Anytime", color: "var(--red)" },
-                  overnight_no_parking: { icon: "🌙", label: "Overnight No Parking", color: "var(--red)" },
-                  street_cleaning:      { icon: "🧹", label: "Street Cleaning", color: "var(--red)" },
-                  bus_stop:             { icon: "🚌", label: "Bus Stop",      color: "var(--orange)" },
-                  no_parking_hours:     { icon: "⏰", label: "No Parking (hours)", color: "var(--orange)" },
-                  school_zone:          { icon: "🏫", label: "School Zone",   color: "var(--orange)" },
-                  time_limit:           { icon: "⏱", label: "Time-Limited",   color: "var(--yellow)" },
-                  loading_zone:         { icon: "🚚", label: "Loading Zone",  color: "var(--yellow)" },
-                  permit_only:          { icon: "🪪", label: "Permit Only",   color: "var(--yellow)" },
-                  authorized_only:      { icon: "🪪", label: "Authorized Vehicles Only", color: "var(--yellow)" },
+                  tow_away:             { icon: "🚨", label: "Tow-Away Zone", color: "var(--red)",    rank: 0 },
+                  fire_zone:            { icon: "🚒", label: "Fire Zone",     color: "var(--red)",    rank: 1 },
+                  no_parking_always:    { icon: "⛔", label: "No Parking Anytime", color: "var(--red)", rank: 2 },
+                  overnight_no_parking: { icon: "🌙", label: "Overnight No Parking", color: "var(--red)", rank: 3 },
+                  street_cleaning:      { icon: "🧹", label: "Street Cleaning", color: "var(--red)",  rank: 4 },
+                  bus_stop:             { icon: "🚌", label: "Bus Stop",      color: "var(--orange)", rank: 5 },
+                  no_parking_hours:     { icon: "⏰", label: "No Parking (hours)", color: "var(--orange)", rank: 6 },
+                  school_zone:          { icon: "🏫", label: "School Zone",   color: "var(--orange)", rank: 7 },
+                  time_limit:           { icon: "⏱", label: "Time-Limited",   color: "var(--yellow)", rank: 8 },
+                  loading_zone:         { icon: "🚚", label: "Loading Zone",  color: "var(--yellow)", rank: 9 },
+                  permit_only:          { icon: "🪪", label: "Permit Only",   color: "var(--yellow)", rank: 10 },
+                  authorized_only:      { icon: "🪪", label: "Authorized Vehicles Only", color: "var(--yellow)", rank: 11 },
                 };
+                // Group by street; collapse identical (type, description) pairs
+                // and roll up the side+block list. The DOT data legitimately
+                // posts the same sign on N + S sides separately and on each
+                // intersecting block, which is why the flat list ballooned to
+                // 100+ duplicate cards per street.
+                const grouped = {};
+                let totalSigns = 0;
+                for (const [street, arr] of Object.entries(restrictions || {})) {
+                  if (!arr || !arr.length) continue;
+                  const byKey = new Map();
+                  for (const r of arr) {
+                    const key = `${r.type}|${r.description}`;
+                    if (!byKey.has(key)) {
+                      byKey.set(key, { type: r.type, description: r.description, blocks: [] });
+                    }
+                    const blockLabel = [
+                      r.side ? `Side ${r.side === "L" ? "Left/Even" : r.side === "R" ? "Right/Odd" : r.side}` : "",
+                      r.block || "",
+                    ].filter(Boolean).join(" · ");
+                    if (blockLabel && !byKey.get(key).blocks.includes(blockLabel)) {
+                      byKey.get(key).blocks.push(blockLabel);
+                    }
+                    totalSigns++;
+                  }
+                  grouped[street] = [...byKey.values()].sort((a, b) =>
+                    (TYPE_META[a.type]?.rank ?? 99) - (TYPE_META[b.type]?.rank ?? 99)
+                  );
+                }
+                const streetOrder = Object.keys(grouped);
+                if (streetOrder.length === 0) return null;
+                // Worst urgency per street drives the borderLeft color of
+                // its container card.
+                const streetWorst = {};
+                for (const [s, items] of Object.entries(grouped)) {
+                  const top = items[0];
+                  streetWorst[s] = TYPE_META[top.type]?.color || "var(--muted)";
+                }
                 return (
                   <div className="sec">
-                    <div className="sec-hd">🛑 Other Parking Restrictions <span className="badge">{allRestrictions.length}</span></div>
+                    <div className="sec-hd">🛑 Other Parking Restrictions <span className="badge">{totalSigns}</span></div>
                     <div className="sec-note" style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",marginBottom:10,letterSpacing:".04em"}}>Signs posted by NYC DOT on this block (tow-away, time-limited, permit, loading, etc.)</div>
-                    {allRestrictions.slice(0, 30).map((r, i) => {
-                      const meta = TYPE_META[r.type] || { icon:"⚠", label:r.type, color:"var(--muted)" };
-                      return (
-                        <div key={i} className="clean-card" style={{borderLeft:`3px solid ${meta.color}`}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                            <span style={{fontSize:"1rem"}}>{meta.icon}</span>
-                            <span style={{fontFamily:"var(--mono)",fontSize:".68rem",letterSpacing:".08em",color:meta.color,textTransform:"uppercase"}}>{meta.label}</span>
-                          </div>
-                          {isMulti && r.street && <div className="street-lbl">{r.street}</div>}
-                          <div style={{fontFamily:"var(--body)",fontSize:".95rem",color:"var(--white)",lineHeight:1.4,marginTop:4}}>{r.description}</div>
-                          {(r.side || r.block) && (
-                            <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--muted)",marginTop:6,letterSpacing:".04em"}}>
-                              {r.side && <>Side: {r.side === "L" ? "Left/Even" : r.side === "R" ? "Right/Odd" : r.side}</>}
-                              {r.side && r.block && " · "}
-                              {r.block && <>Block: {r.block}</>}
+                    {streetOrder.map(street => (
+                      <div key={street} className="clean-card" style={{borderLeft:`3px solid ${streetWorst[street]}`,paddingTop:14,paddingBottom:12}}>
+                        <div className="street-lbl" style={{fontFamily:"var(--display)",fontSize:".95rem",color:"var(--yellow)",letterSpacing:".05em",marginBottom:10}}>{street}</div>
+                        {grouped[street].map((g, i) => {
+                          const meta = TYPE_META[g.type] || { icon:"⚠", label:g.type, color:"var(--muted)" };
+                          return (
+                            <div key={i} style={{padding:"8px 0",borderTop:i>0?"1px solid #1a1a1a":"none"}}>
+                              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                                <span style={{fontSize:".95rem"}}>{meta.icon}</span>
+                                <span style={{fontFamily:"var(--mono)",fontSize:".62rem",letterSpacing:".08em",color:meta.color,textTransform:"uppercase"}}>{meta.label}</span>
+                              </div>
+                              <div style={{fontFamily:"var(--body)",fontSize:".88rem",color:"var(--white)",lineHeight:1.35}}>{g.description}</div>
+                              {g.blocks.length > 0 && (
+                                <div style={{fontFamily:"var(--mono)",fontSize:".58rem",color:"var(--muted)",marginTop:4,letterSpacing:".03em",lineHeight:1.5}}>
+                                  {g.blocks.slice(0,3).join(" · ")}{g.blocks.length > 3 ? ` · +${g.blocks.length - 3} more` : ""}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {allRestrictions.length > 30 && (
-                      <div style={{fontFamily:"var(--mono)",fontSize:".65rem",color:"var(--muted)",padding:"8px 4px",letterSpacing:".04em"}}>
-                        …and {allRestrictions.length - 30} more signs on these blocks
+                          );
+                        })}
                       </div>
-                    )}
+                    ))}
                   </div>
                 );
               })()}
