@@ -2058,6 +2058,17 @@ export default function App() {
     if (window.__AUTO_GPS__) { window.__AUTO_GPS__ = false; setTimeout(handleGPS, 500); }
   }, [handleGPS]);
 
+  // URL → phase routing for direct deep links (e.g. /support, /faq, /account).
+  // Required by App Store review: Apple wants a stable Support URL that opens
+  // straight to the support page without app navigation.
+  useEffect(() => {
+    const path = (typeof window !== "undefined" && window.location?.pathname) || "/";
+    const m = path.replace(/\/+/g, "/").toLowerCase();
+    if (m.startsWith("/support")) setPhase("support");
+    else if (m.startsWith("/faq")) setPhase("faq");
+    else if (m.startsWith("/account")) setPhase("account");
+  }, []);
+
   // Check location permission on load — only restore search if user was on results page
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -2142,6 +2153,7 @@ export default function App() {
                   <div className="menu-item" onClick={() => { setShowUserMenu(false); openPaywall(); }}>Upgrade</div>
                 )}
                 <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("faq"); }}>FAQ</div>
+                <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("support"); }}>Support</div>
                 {user && (
                   <div className="menu-item" style={{color:"var(--red)"}} onClick={() => { setShowUserMenu(false); handleLogout(); }}>Sign Out</div>
                 )}
@@ -2516,6 +2528,48 @@ export default function App() {
           ))}
           <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"#444",lineHeight:1.7,marginTop:16,paddingTop:20,borderTop:"1px solid #1f1f1f"}}>
             Street Park Now is provided for informational purposes only. We make no warranties regarding the accuracy, completeness, or timeliness of any information. Street Park Now is not liable for any parking fines, towing charges, or other penalties. Always check posted street signs — they are the legal authority.
+          </div>
+        </div>
+      )}
+
+      {/* SUPPORT PAGE — required by App Store review (contact + cancellation) */}
+      {phase === "support" && (
+        <div className="dash" style={{maxWidth:600,paddingBottom:60}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"20px 0 16px",borderBottom:"1px solid #1f1f1f",marginBottom:24}}>
+            <button onClick={resetHome} style={{background:"none",border:"1px solid #333",color:"var(--white)",fontFamily:"var(--mono)",fontSize:".6rem",padding:"5px 12px",cursor:"pointer"}}>← BACK</button>
+            <div style={{fontFamily:"var(--display)",fontSize:"1.6rem",letterSpacing:".06em"}}>STREET PARK NOW SUPPORT</div>
+          </div>
+
+          <div style={{padding:"16px 18px",background:"rgba(247,201,72,0.06)",border:"1px solid rgba(247,201,72,0.3)",borderRadius:4,marginBottom:24}}>
+            <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--yellow)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>Contact</div>
+            <a href="mailto:streetparkinginfo@gmail.com" style={{fontFamily:"var(--body)",fontSize:"1.05rem",color:"var(--white)",textDecoration:"underline",textUnderlineOffset:"3px"}}>streetparkinginfo@gmail.com</a>
+            <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",lineHeight:1.6,marginTop:8}}>We respond within 24 hours on business days.</div>
+          </div>
+
+          <div style={{fontFamily:"var(--display)",fontSize:".95rem",letterSpacing:".08em",color:"var(--white)",marginBottom:14,textTransform:"uppercase"}}>Frequently Asked</div>
+
+          {[
+            { q: "How do I cancel my subscription?",
+              a: "On iPhone: open Settings → tap your name at the top → Subscriptions → Street Park Now → Cancel Subscription. Cancellations take effect at the end of the current billing period — you keep full access until then. On the web, you can manage billing through the Stripe portal link in your account email." },
+            { q: "How do I report a bug?",
+              a: <>Email <a href="mailto:streetparkinginfo@gmail.com" style={{color:"var(--yellow)",textDecoration:"underline",textUnderlineOffset:"2px"}}>streetparkinginfo@gmail.com</a> with a screenshot, the address you searched, your city, and the time. The more detail the better — we'll investigate and reply within a day.</> },
+            { q: "What cities do you cover?",
+              a: <>NYC (all 5 boroughs), Chicago, Los Angeles, San Francisco, Boston, Philadelphia, Washington DC, Seattle, Miami, Atlanta, Toronto, Denver, Portland, Nashville, Austin, Dallas, Minneapolis, San Diego, Sacramento, and New Jersey (Hoboken, Jersey City, Newark). <span onClick={resetHome} style={{color:"var(--yellow)",textDecoration:"underline",textUnderlineOffset:"2px",cursor:"pointer"}}>See the full coverage map on the home page →</span></> },
+            { q: "How accurate is the data?",
+              a: "We pull from official city open-data feeds (NYC DOT, Chicago Data Portal, San Diego, Denver DOTI, Minneapolis Public Works, etc.) and update regularly. NYC is the most complete — every posted parking sign, plus alternate-side cleaning. Other cities have partial coverage and improve as we onboard new datasets. Always check physical signs on the block before parking — they are the legal authority." },
+            { q: "How do I request a refund?",
+              a: <>For App Store purchases, refunds go through Apple: <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener noreferrer" style={{color:"var(--yellow)",textDecoration:"underline",textUnderlineOffset:"2px"}}>reportaproblem.apple.com</a>. For web purchases, email us at streetparkinginfo@gmail.com within 7 days of purchase.</> },
+            { q: "Why does the app need my location?",
+              a: "Location is only used in the moment, to find the streets nearest to you and show their parking schedules. We do not store your location history or share it with anyone. You can search any address manually instead of granting location access." },
+          ].map((item, i, arr) => (
+            <div key={i} style={{marginBottom:22,paddingBottom:22,borderBottom:i<arr.length-1?"1px solid #1f1f1f":"none"}}>
+              <div style={{fontFamily:"var(--body)",fontWeight:700,fontSize:"1.02rem",color:"var(--yellow)",marginBottom:10,lineHeight:1.3}}>{item.q}</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--muted)",lineHeight:1.8,letterSpacing:".02em"}}>{item.a}</div>
+            </div>
+          ))}
+
+          <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"#444",lineHeight:1.7,marginTop:24,paddingTop:20,borderTop:"1px solid #1f1f1f"}}>
+            Street Park Now is provided for informational purposes only. We make no warranties regarding the accuracy, completeness, or timeliness of any information. Always check posted street signs — they are the legal authority.
           </div>
         </div>
       )}
