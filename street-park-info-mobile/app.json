@@ -2,7 +2,7 @@
   "expo": {
     "name": "Street Park Now",
     "slug": "street-park-info-mobile",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -18,7 +18,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Street Park Now uses your location to find nearby street cleaning schedules, parking restrictions, and film permits so you know exactly when to move your car to avoid tickets. For example, if you're parked on Bedford Avenue in Brooklyn, we'll show you that street cleaning happens Monday and Thursday 8–9:30 AM."
       },
-      "buildNumber": "3"
+      "buildNumber": "4"
     },
     "android": {
       "adaptiveIcon": {

@@ -2244,7 +2244,7 @@ export default function App() {
             onPointerDown={ensureLocation}
           >
             <div style={{fontFamily:"var(--mono)",fontSize:".6rem",color:"var(--yellow)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:8,textAlign:"center"}}>
-              {homeMapCoords ? "🔥 LIVE PARKING HEAT MAP · TAP A STREET TO SEARCH" : "🟡 NEIGHBORHOODS WE COVER · TAP A NEIGHBORHOOD OR USE SEARCH BAR"}
+              {homeMapCoords ? "🔥 LIVE PARKING MAP · TAP A STREET TO SEARCH" : "🟡 NEIGHBORHOODS WE COVER · TAP A NEIGHBORHOOD OR USE SEARCH BAR"}
             </div>
             {homeMapCoords ? (
               <HeatMap
@@ -2355,7 +2355,7 @@ export default function App() {
           {/* FEATURES */}
           <div className="features-section">
             {[
-              { icon:"🗺", title:"Live Parking Heat Map", sub:"Color-coded streets show where parking is safest near you right now." },
+              { icon:"🗺", title:"Live Parking Map", sub:"Color-coded streets show where parking is safest near you right now." },
               { icon:"🧹", title:"Street Cleaning Schedules", sub:"Know exactly when to move your car — with upcoming dates so you're never caught off guard." },
               { icon:"🎬", title:"Film & TV Shoot Schedules", sub:"No parking signs stapled to poles are easy to miss. We surface shoot permits before you even arrive." },
               { icon:"📅", title:"Public Events & Closures", sub:"Marathons, parades, street fairs — any permitted event that could impact your parking." },
@@ -2374,7 +2374,7 @@ export default function App() {
           {/* Pricing */}
           <div style={{padding:"0 16px",maxWidth:560,width:"100%"}}>
             <div className="paywall-title" style={{marginBottom:4,padding:"0 4px"}}>CHOOSE YOUR PLAN</div>
-            <div className="paywall-sub" style={{marginBottom:16,padding:"0 4px"}}>All plans include the live parking heat map, street cleaning schedules, film permits, events & weather.</div>
+            <div className="paywall-sub" style={{marginBottom:16,padding:"0 4px"}}>All plans include the live parking map, street cleaning schedules, film permits, events & weather.</div>
 
             {/* Feature comparison table */}
             <div style={{overflowX:"auto",marginBottom:16,background:"#141414",border:"1px solid #2a2a2a",borderRadius:4}}>
@@ -2390,7 +2390,7 @@ export default function App() {
                 <tbody>
                   {[
                     ["Searches","999/period","Unlimited","Unlimited"],
-                    ["Live Heat Map","✓","✓","✓"],
+                    ["Live Parking Map","✓","✓","✓"],
                     ["Street Cleaning","✓","✓","✓"],
                     ["Film Permits","✓","✓","✓"],
                     ["Events & Weather","✓","✓","✓"],
@@ -2510,15 +2510,15 @@ export default function App() {
             { q:"Will this prevent me from ever getting a ticket again?", a:"We can't guarantee that — and no app can. Street parking rules are complex, change frequently, and enforcement varies. What we can promise is that we work hard to surface the most accurate, up-to-date information available so you have the best possible chance of moving your car on time. Street Park Now is a tool to help you stay informed, not a substitute for reading posted signs. Always check the signs on your block — they are the legal authority." },
             { q:"How accurate is the data?", a:"We pull from official city databases, permit records, and real-time sources wherever possible. However, data can lag, cities update rules without notice, and special circumstances like holidays or emergency orders may not always be reflected immediately. We update our data regularly and are always working to improve coverage." },
             { q:"Which cities are supported?", a:"NYC, Los Angeles, Chicago, San Francisco, Boston, Philadelphia, Washington DC, Seattle, Miami, Atlanta, Toronto, Denver, Portland, Nashville, Austin, Dallas, Sacramento, Minneapolis, and New Jersey (Hoboken, Jersey City, Newark) — with more cities being added regularly." },
-            { q:"What does the heat map show?", a:"The live parking heat map color-codes streets near you based on how soon street cleaning is scheduled. Red = move today or tomorrow. Yellow = move in 2-3 days. Green = safe for 4+ days. Gray = no data available." },
+            { q:"What does the parking map show?", a:"The live parking map color-codes streets near you based on how soon street cleaning is scheduled. Red = move today or tomorrow. Yellow = move in 2-3 days. Green = safe for 4+ days. Gray = no data available." },
             { q:"What's included in each plan?", a:"Free Account: 8 searches total. Basic ($4.20/mo or $45/yr): 999 searches, last 2 searches shown on map. Premium ($5.79/mo or $58.99/yr): unlimited searches, last 2 on map. Unlimited+Save ($6.49/mo or $69.99/yr): unlimited searches + save up to 10 locations for one-tap access." },
             { q:"How do I cancel my subscription?", a:"You can cancel anytime. On iOS, go to Settings → Apple ID → Subscriptions → Street Park Now → Cancel. On the web, manage your subscription through your Stripe billing portal. Cancellations take effect at the end of your current billing period — you keep access until then." },
             { q:"Can I get a refund?", a:"We offer refunds within 48 hours of purchase if you haven't used more than 5 searches in that period. Contact us at support@streetparknow.app and we'll take care of you. Annual plans are refundable within 7 days of purchase." },
             { q:"How do I upgrade or downgrade my plan?", a:"Tap the ☰ menu → Upgrade to see all plans and select a new one. Upgrades take effect immediately. Downgrades take effect at the start of your next billing period." },
             { q:"Is my payment information secure?", a:"Yes. All payments are processed by Stripe, a PCI-compliant payment processor trusted by millions of businesses. We never see or store your credit card information." },
             { q:"Is my location data stored?", a:"Your location is used only to show nearby parking information in the moment. We do not store your location history or share it with third parties. See our Privacy Policy for full details." },
-            { q:"What is the Unlimited+Save feature?", a:"With Unlimited+Save, you can save up to 10 locations and access them instantly from your home screen with one tap. Each saved location runs a full search including the live heat map. You manage which locations are saved using checkboxes — unchecked locations are removed when you return." },
-            { q:"Does the app work offline?", a:"No — Street Park Now requires an internet connection to fetch live parking data, permits, and the heat map. We recommend checking before you park, not while you're parked with no signal." },
+            { q:"What is the Unlimited+Save feature?", a:"With Unlimited+Save, you can save up to 10 locations and access them instantly from your home screen with one tap. Each saved location runs a full search including the live parking map. You manage which locations are saved using checkboxes — unchecked locations are removed when you return." },
+            { q:"Does the app work offline?", a:"No — Street Park Now requires an internet connection to fetch live parking data, permits, and the parking map. We recommend checking before you park, not while you're parked with no signal." },
             { q:"How do I contact support?", a:"Email us at support@streetparknow.app. We typically respond within 24 hours on business days." },
           ].map((item, i, arr) => (
             <div key={i} style={{marginBottom:24,paddingBottom:24,borderBottom:i<arr.length-1?"1px solid #1f1f1f":"none"}}>
@@ -3319,7 +3319,7 @@ export default function App() {
           {!Auth.isPaid() && (
             <div style={{padding:"20px 16px",borderTop:"1px solid #222"}}>
               <div className="paywall-title" style={{fontSize:"1.6rem",marginBottom:4}}>UPGRADE YOUR PLAN</div>
-              <div className="paywall-sub" style={{marginBottom:16}}>All plans include heat map, street cleaning, film permits, events & weather.</div>
+              <div className="paywall-sub" style={{marginBottom:16}}>All plans include parking map, street cleaning, film permits, events & weather.</div>
               <div style={{overflowX:"auto",marginBottom:12,background:"#141414",border:"1px solid #2a2a2a",borderRadius:4}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"var(--mono)",fontSize:".6rem"}}>
                   <thead>
@@ -3398,7 +3398,7 @@ export default function App() {
           <div className="paywall-sheet" onClick={e => e.stopPropagation()} style={{maxHeight:"90vh",overflowY:"auto",width:"100%",maxWidth:560,background:"#0e0e0e",position:"relative"}}>
             <button style={{position:"absolute",top:12,right:16,background:"none",border:"none",color:"var(--muted)",fontSize:"1.2rem",cursor:"pointer"}} onClick={() => setShowPaywall(false)}>✕</button>
             <div className="paywall-title" style={{marginBottom:4}}>CHOOSE YOUR PLAN</div>
-            <div className="paywall-sub" style={{marginBottom:20}}>All plans include the live parking heat map, street cleaning schedules, film permits, events & weather.</div>
+            <div className="paywall-sub" style={{marginBottom:20}}>All plans include the live parking map, street cleaning schedules, film permits, events & weather.</div>
 
             {/* Feature comparison table */}
             <div style={{overflowX:"auto",marginBottom:20,background:"#141414",border:"1px solid #2a2a2a",borderRadius:4}}>
@@ -3414,7 +3414,7 @@ export default function App() {
                 <tbody>
                   {[
                     ["Searches",         "999/period",  "Unlimited",  "Unlimited"],
-                    ["Live Heat Map",    "✓",           "✓",          "✓"],
+                    ["Live Parking Map",    "✓",           "✓",          "✓"],
                     ["Street Cleaning",  "✓",           "✓",          "✓"],
                     ["Film Permits",     "✓",           "✓",          "✓"],
                     ["Events & Weather", "✓",           "✓",          "✓"],
