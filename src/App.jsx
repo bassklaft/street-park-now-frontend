@@ -344,6 +344,15 @@ const Auth = {
   authHeader:  () => ({ "Authorization": `Bearer ${Auth.getToken()}`, "Content-Type": "application/json" }),
 };
 
+// Terms of Service acceptance — gates first interaction. We bump the version
+// when the legal text changes so existing users re-confirm. Stored as the
+// version string they accepted so a future bump invalidates old acceptance.
+const TERMS_VERSION = "2026-04-28";
+const Terms = {
+  isAccepted: () => localStorage.getItem("spn_terms_agreed") === TERMS_VERSION,
+  accept:     () => localStorage.setItem("spn_terms_agreed", TERMS_VERSION),
+};
+
 // ─── STORAGE (kept for backwards compat) ─────────────────────────────────────
 const Storage = {
   getCount:     () => Auth.getCount(),
@@ -1742,6 +1751,7 @@ export default function App() {
   const [recentOpen,       setRecentOpen]       = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showFAQ,        setShowFAQ]        = useState(false);
+  const [termsAccepted,  setTermsAccepted]  = useState(() => Terms.isAccepted());
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -2154,6 +2164,7 @@ export default function App() {
                 )}
                 <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("faq"); }}>FAQ</div>
                 <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("support"); }}>Support</div>
+                <div className="menu-item" onClick={() => { setShowUserMenu(false); localStorage.removeItem("spn_last_phase"); setPhase("terms"); }}>Terms</div>
                 {user && (
                   <div className="menu-item" style={{color:"var(--red)"}} onClick={() => { setShowUserMenu(false); handleLogout(); }}>Sign Out</div>
                 )}
@@ -2574,6 +2585,55 @@ export default function App() {
         </div>
       )}
 
+      {/* TERMS PAGE — full liability disclaimer. Linked from disclaimer
+          banner, hamburger menu, footer, and the first-visit gate modal. */}
+      {phase === "terms" && (
+        <div className="dash" style={{maxWidth:680,paddingBottom:60}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"20px 0 16px",borderBottom:"1px solid #1f1f1f",marginBottom:24}}>
+            <button onClick={resetHome} style={{background:"none",border:"1px solid #333",color:"var(--white)",fontFamily:"var(--mono)",fontSize:".6rem",padding:"5px 12px",cursor:"pointer"}}>← BACK</button>
+            <div style={{fontFamily:"var(--display)",fontSize:"1.6rem",letterSpacing:".06em"}}>TERMS OF USE</div>
+          </div>
+
+          <div style={{fontFamily:"var(--mono)",fontSize:".55rem",color:"var(--muted)",letterSpacing:".1em",marginBottom:18}}>LAST UPDATED: APRIL 28, 2026</div>
+
+          {[
+            { h: "1. Informational service only",
+              b: "Street Park Now (\"the Service\") is an informational tool. The Service surfaces parking-related information aggregated from public datasets — including the New York City Department of Transportation Parking Regulation Signs dataset (nfid-uabd), the NYC Alternate Side Parking calendar, and equivalent open-data feeds for other cities. The Service is not legal, professional, or municipal advice and does not have the authority to permit or prohibit parking on any street." },
+            { h: "2. Posted signs are the legal authority",
+              b: "Posted physical street signs and pavement markings on the block where you are parking are the legal authority. You agree to read and follow them before leaving your vehicle. The Service is a convenience layer over public data — it cannot reflect signs that have been removed, replaced, defaced, or installed since the underlying datasets were last refreshed, and it cannot reflect temporary signage for events, film shoots, construction, emergencies, or street closures." },
+            { h: "3. Data accuracy & timeliness",
+              b: "We make no warranty as to the accuracy, completeness, or timeliness of any information shown. Data feeds may lag, contain errors, or be temporarily unavailable. Cleaning suspensions, holidays, and emergency orders may not be reflected immediately. Coverage outside New York City is partial — only NYC has every digitized parking sign as a public dataset; in other cities we surface what each city publishes, which is often only permit zones, alternate-side schedules, or a subset thereof." },
+            { h: "4. No liability for parking penalties",
+              b: "TO THE MAXIMUM EXTENT PERMITTED BY LAW, STREET PARK NOW AND ITS OPERATORS ARE NOT LIABLE FOR ANY PARKING TICKETS, TOWING CHARGES, IMPOUND FEES, BOOTING FEES, FINES, PENALTIES, COURT COSTS, LATE FEES, INSURANCE CONSEQUENCES, OR ANY OTHER DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF YOUR USE OF THE SERVICE OR ANY INFORMATION PROVIDED BY THE SERVICE." },
+            { h: "5. No professional advice",
+              b: "Nothing in the Service constitutes legal advice. If you receive a parking ticket, tow, or other enforcement action, your remedies and obligations are governed by the issuing jurisdiction. Contact a licensed attorney or the relevant city agency to dispute or resolve any such action." },
+            { h: "6. Service availability",
+              b: "The Service is provided on an \"as-is\" and \"as-available\" basis. We may modify, suspend, or discontinue any feature at any time without notice. Searches, the live parking map, and account features may be temporarily unavailable due to maintenance, third-party data outages, or upstream API failures." },
+            { h: "7. Account & subscriptions",
+              b: "Free accounts are limited to a fixed number of searches. Paid tiers are billed in advance through Apple App Store, Google Play, or Stripe. Cancellations take effect at the end of the current billing period. Refunds for App Store purchases must be requested through Apple at reportaproblem.apple.com; web refund requests are honored within 7 days of purchase per our policy." },
+            { h: "8. Acceptable use",
+              b: "You agree not to scrape, crawl, redistribute, or resell our data feeds; not to attempt to circumvent search limits or paywalls; and not to use the Service to build a competing product. Automated bulk access without prior written permission is prohibited." },
+            { h: "9. Indemnification",
+              b: "You agree to indemnify and hold harmless Street Park Now, its operators, contractors, and data providers from any claim or demand arising out of your use of the Service or your violation of these Terms." },
+            { h: "10. Governing law",
+              b: "These Terms are governed by the laws of the State of New York, without regard to conflict-of-law principles. Any dispute will be resolved in the state or federal courts sitting in Kings County, New York." },
+            { h: "11. Changes to these Terms",
+              b: "We may update these Terms from time to time. Material changes will trigger a new acceptance prompt the next time you use the Service. Continued use after a change constitutes acceptance." },
+            { h: "12. Contact",
+              b: <>Questions about these Terms: <a href="mailto:streetparkinginfo@gmail.com" style={{color:"var(--yellow)",textDecoration:"underline",textUnderlineOffset:"2px"}}>streetparkinginfo@gmail.com</a>.</> },
+          ].map((s, i) => (
+            <div key={i} style={{marginBottom:22}}>
+              <div style={{fontFamily:"var(--body)",fontWeight:700,fontSize:"1rem",color:"var(--yellow)",marginBottom:8,lineHeight:1.3}}>{s.h}</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--muted)",lineHeight:1.8,letterSpacing:".02em"}}>{s.b}</div>
+            </div>
+          ))}
+
+          <div style={{marginTop:30,padding:"14px 16px",background:"rgba(247,201,72,0.06)",border:"1px solid rgba(247,201,72,0.3)",borderRadius:4,fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--yellow)",lineHeight:1.7}}>
+            By using Street Park Now you acknowledge that you have read these Terms and the <a href="/privacy.html" style={{color:"var(--yellow)",textDecoration:"underline",textUnderlineOffset:"2px"}}>Privacy Policy</a>, and that you accept the limitations and disclaimers above.
+          </div>
+        </div>
+      )}
+
       {/* SAVED LOCATIONS PAGE */}
       {phase === "saved" && user?.tier === "unlimited" && (
         <SavedLocationsPage
@@ -2720,6 +2780,13 @@ export default function App() {
               />
               <button onClick={handleSearch}>GO</button>
             </div>
+          </div>
+
+          {/* Liability disclaimer — must show at the top of every result view.
+              Posted street signs are the legal authority; we are not. */}
+          <div style={{margin:"10px 16px 0",padding:"12px 14px",background:"rgba(255,90,72,0.10)",border:"1px solid rgba(255,90,72,0.5)",borderRadius:4,fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--white)",letterSpacing:".02em",lineHeight:1.6}}>
+            <div style={{color:"#ff8a72",fontWeight:700,letterSpacing:".06em",marginBottom:6}}>⚠️ IMPORTANT</div>
+            Always verify by reading physical street signs. Street Park Now is not liable for parking tickets or towing. <span onClick={() => { localStorage.removeItem("spn_last_phase"); setPhase("terms"); }} style={{color:"var(--yellow)",textDecoration:"underline",textUnderlineOffset:"3px",cursor:"pointer"}}>Read full terms →</span>
           </div>
 
           {/* Loc bar */}
@@ -3361,6 +3428,16 @@ export default function App() {
         </div>
       )}
 
+      {/* GLOBAL FOOTER — Terms + Privacy on every phase */}
+      {phase !== "loading" && (
+        <div style={{padding:"24px 16px 32px",borderTop:"1px solid #1a1a1a",marginTop:32,fontFamily:"var(--mono)",fontSize:".58rem",color:"#666",letterSpacing:".06em",textAlign:"center",lineHeight:1.9}}>
+          <span onClick={() => { localStorage.removeItem("spn_last_phase"); setPhase("terms"); }} style={{color:"#aaa",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"3px",margin:"0 10px"}}>TERMS</span>
+          <a href="/privacy.html" style={{color:"#aaa",textDecoration:"underline",textUnderlineOffset:"3px",margin:"0 10px"}}>PRIVACY</a>
+          <span onClick={() => { localStorage.removeItem("spn_last_phase"); setPhase("support"); }} style={{color:"#aaa",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"3px",margin:"0 10px"}}>SUPPORT</span>
+          <div style={{marginTop:10,fontSize:".5rem",color:"#444"}}>© 2026 Street Park Now · Posted street signs are the legal authority</div>
+        </div>
+      )}
+
       {/* AUTH MODAL */}
       {showAuthModal && (
         <div onClick={() => setShowAuthModal(false)} style={{position:"fixed",top:0,left:0,width:"100vw",height:"100vh",background:"rgba(0,0,0,.85)",zIndex:99999,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",boxSizing:"border-box"}}>
@@ -3463,6 +3540,78 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* FIRST-VISIT TERMS GATE — must accept before using the app. Blocks
+          interaction (no dismiss) until the checkbox is checked and accepted.
+          Bumping TERMS_VERSION re-prompts every existing user. */}
+      {!termsAccepted && (
+        <TermsGateModal
+          onAccept={() => { Terms.accept(); setTermsAccepted(true); }}
+          onViewTerms={() => { Terms.accept(); setTermsAccepted(true); localStorage.removeItem("spn_last_phase"); setPhase("terms"); }}
+        />
+      )}
     </>
+  );
+}
+
+// First-visit gate. Cannot be dismissed without accepting — there's no
+// background-click close handler. The "Read the full Terms" link accepts
+// implicitly (treats reading the page as agreement), since otherwise the
+// gate would block the very page it links to.
+function TermsGateModal({ onAccept, onViewTerms }) {
+  const [agreed, setAgreed] = useState(false);
+  return (
+    <div style={{position:"fixed",top:0,left:0,width:"100vw",height:"100vh",background:"rgba(0,0,0,.94)",zIndex:99998,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",boxSizing:"border-box"}}>
+      <div style={{background:"var(--g1)",border:"1px solid var(--yellow)",maxWidth:520,width:"100%",padding:"26px 22px",borderRadius:4}}>
+        <div style={{fontFamily:"var(--display)",fontSize:"1.4rem",letterSpacing:".06em",color:"var(--yellow)",marginBottom:8}}>BEFORE YOU PARK</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:".62rem",color:"var(--muted)",letterSpacing:".06em",marginBottom:18}}>READ THIS ONCE</div>
+
+        <div style={{fontFamily:"var(--body)",fontSize:".95rem",color:"var(--white)",lineHeight:1.6,marginBottom:14}}>
+          Street Park Now is an informational tool, not the legal authority. Posted physical street signs are.
+        </div>
+        <ul style={{paddingLeft:18,margin:"0 0 16px",fontFamily:"var(--mono)",fontSize:".68rem",color:"var(--muted)",lineHeight:1.8,letterSpacing:".02em"}}>
+          <li>Always read the signs on the block before you park.</li>
+          <li>Data feeds can lag, omit temporary signs, or contain errors.</li>
+          <li>We are not liable for parking tickets, towing, or fines.</li>
+        </ul>
+
+        <div style={{padding:"10px 12px",background:"rgba(247,201,72,0.06)",border:"1px solid rgba(247,201,72,0.25)",borderRadius:3,marginBottom:18}}>
+          <span onClick={onViewTerms} style={{fontFamily:"var(--mono)",fontSize:".64rem",color:"var(--yellow)",letterSpacing:".05em",cursor:"pointer",textDecoration:"underline",textUnderlineOffset:"3px"}}>
+            Read the full Terms of Use →
+          </span>
+        </div>
+
+        <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:18}}>
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            style={{marginTop:3,width:18,height:18,cursor:"pointer",accentColor:"var(--yellow)"}}
+          />
+          <span style={{fontFamily:"var(--mono)",fontSize:".7rem",color:"var(--white)",lineHeight:1.5,letterSpacing:".02em"}}>
+            I have read and agree to the Terms of Use and Privacy Policy. I understand that posted street signs are the legal authority and that Street Park Now is not liable for parking penalties.
+          </span>
+        </label>
+
+        <button
+          onClick={onAccept}
+          disabled={!agreed}
+          style={{
+            width:"100%",
+            background: agreed ? "var(--yellow)" : "#2a2a2a",
+            color: agreed ? "#000" : "#666",
+            border: "none",
+            fontFamily:"var(--mono)",
+            fontSize:".75rem",
+            letterSpacing:".1em",
+            padding:"14px",
+            cursor: agreed ? "pointer" : "not-allowed",
+            fontWeight:700,
+          }}
+        >
+          AGREE & CONTINUE
+        </button>
+      </div>
+    </div>
   );
 }
